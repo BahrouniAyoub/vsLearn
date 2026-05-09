@@ -1,14 +1,7 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import {
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Lightbulb,
-  Play,
-} from "lucide-react";
+import { Play, Code, Eye, Loader2 } from "lucide-react";
 
-import { AppShell } from "@/components/app-shell";
 import { ProtectedRoute } from "@/lib/auth";
 import { getCourseContent } from "@/lib/content";
 import { findLesson as findMockLesson } from "@/lib/vslearn/data";
@@ -19,9 +12,10 @@ import type { ConsoleMessage } from "@/components/preview";
 import { ChallengeRunner } from "@/components/challenges";
 import type { ChallengeTestConfig } from "@/lib/challenges";
 import { lessonToTestConfig } from "@/lib/challenges";
-import type { ChallengeValidation } from "@/lib/content";
-
-import type { CourseLesson, CourseContent, CourseModule } from "@/lib/content";
+import { useCompletion } from "@/lib/workspace";
+import { LessonLayout, LessonHeader, LessonInstructions, SolutionDialog } from "@/components/lesson";
+import type { BottomPanelTab } from "@/components/lesson";
+import type { ChallengeValidation, CourseLesson, CourseContent, CourseModule } from "@/lib/content";
 
 export const Route = createFileRoute("/learn/$courseSlug/$lessonSlug")({
   head: ({ params }) => {
@@ -44,7 +38,7 @@ function LessonRoute() {
   );
 }
 
-type LessonData = {
+type MockLesson = {
   course: { id: string; title: string; modules: { id: string; lessons: { id: string; title: string }[] }[] };
   module: { id: string; title: string };
   lesson: {
@@ -57,11 +51,12 @@ type LessonData = {
     solution?: string;
     language?: string;
     expectedOutput?: string;
+    hints?: string[];
     quiz?: { q: string; options: string[]; answer: number }[];
   };
 };
 
-type ContentLessonData = {
+type ContentLesson = {
   course: CourseContent;
   module: CourseModule;
   lesson: CourseLesson;
@@ -131,59 +126,64 @@ function LessonView() {
     if (!content) return null;
     for (const m of content.modules) {
       const l = m.lessons.find((x) => x.slug === lessonSlug);
-      if (l) return { course: content, module: m, lesson: l } as ContentLessonData;
+      if (l) return { course: content, module: m, lesson: l } as ContentLesson;
     }
     return null;
   }, [content, lessonSlug]);
 
   const mockFound = useMemo(() => {
     if (contentLesson) return null;
-    return findMockLesson(courseSlug, lessonSlug) as LessonData | null;
+    return findMockLesson(courseSlug, lessonSlug) as MockLesson | null;
   }, [contentLesson, courseSlug, lessonSlug]);
 
   const displayData = useMemo(() => {
     if (contentLesson) {
+      const { course, module, lesson } = contentLesson;
       return {
-        course: { id: contentLesson.course.slug, title: contentLesson.course.title, modules: contentLesson.course.modules.map((m) => ({ id: m.slug, title: m.title, lessons: m.lessons.map((l) => ({ id: l.slug, title: l.frontmatter.title })) })) },
-        module: { id: contentLesson.module.slug, title: contentLesson.module.title },
+        course: { id: course.slug, title: course.title, modules: course.modules.map((m) => ({ id: m.slug, title: m.title, lessons: m.lessons.map((l) => ({ id: l.slug, title: l.frontmatter.title })) })) },
+        module: { id: module.slug, title: module.title },
         lesson: {
-          id: contentLesson.lesson.slug,
-          title: contentLesson.lesson.frontmatter.title,
-          type: contentLesson.lesson.frontmatter.type,
-          duration: `${contentLesson.lesson.frontmatter.durationMinutes} min`,
-          content: contentLesson.lesson.body,
-          starterFiles: contentLesson.lesson.starterFiles.map((f) => ({ path: f.path, content: f.content, language: f.language })),
-          solutionFiles: contentLesson.lesson.solutionFiles.map((f) => ({ path: f.path, content: f.content, language: f.language })),
+          id: lesson.slug,
+          title: lesson.frontmatter.title,
+          type: lesson.frontmatter.type,
+          duration: `${lesson.frontmatter.durationMinutes} min`,
+          content: lesson.body,
+          challenge: lesson.challenge,
+          starterFiles: lesson.starterFiles.map((f) => ({ path: f.path, content: f.content, language: f.language })),
+          solutionFiles: lesson.solutionFiles.map((f) => ({ path: f.path, content: f.content, language: f.language })),
         },
-      } as LessonData & { lesson: { starterFiles: EditorFile[]; solutionFiles: EditorFile[] } };
+      };
     }
     if (mockFound) {
       return {
         ...mockFound,
-        lesson: { ...mockFound.lesson, starterFiles: [], solutionFiles: [] },
+        lesson: { ...mockFound.lesson, starterFiles: [], solutionFiles: [], challenge: null },
       };
     }
     return null;
   }, [contentLesson, mockFound]);
 
-  if (!displayData) throw notFound();
+  const navigation = useMemo(() => {
+    if (!displayData) return null;
+    const { course, lesson: l } = displayData;
+    const allLessons = course.modules.flatMap((m) => m.lessons);
+    const idx = allLessons.findIndex((item) => item.id === lessonSlug);
+    return {
+      prev: idx > 0 ? allLessons[idx - 1] : null,
+      next: idx < allLessons.length - 1 ? allLessons[idx + 1] : null,
+      allLessons,
+      currentIndex: idx,
+      totalLessons: allLessons.length,
+    };
+  }, [displayData, lessonSlug]);
+
+  if (!displayData || !navigation) throw notFound();
 
   const { course, module, lesson } = displayData;
 
-  const allLessons = course.modules.flatMap((m) => m.lessons);
-  const idx = allLessons.findIndex((item) => item.id === lessonSlug);
-  const prev = idx > 0 ? allLessons[idx - 1] : null;
-  const next = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
-
   const files = useMemo(() => toEditorFiles(lesson), [lesson]);
   const sFiles = useMemo(() => solutionFiles(lesson), [lesson]);
-
-  const editorRef = useRef<EditorPanelHandle>(null);
-
-  const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
-  const [currentFiles, setCurrentFiles] = useState<EditorFile[]>(files);
-  const [showSolution, setShowSolution] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("editor");
+  const hasSsolution = sFiles.length > 0;
 
   const isCoding = lesson.type === "coding";
   const isQuiz = lesson.type === "quiz";
@@ -191,11 +191,41 @@ function LessonView() {
   const hasCodingContent = isCoding && files.length > 0;
 
   const challengeValidation: ChallengeValidation | null | undefined = contentLesson?.lesson.challenge?.validation;
+  const challengeInstructions = contentLesson?.lesson.challenge?.instructions;
+
+  const editorRef = useRef<EditorPanelHandle>(null);
+
+  const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
+  const [currentFiles, setCurrentFiles] = useState<EditorFile[]>(files);
+  const [viewMode, setViewMode] = useState<ViewMode>("editor");
+  const [hintsVisible, setHintsVisible] = useState(false);
+  const [solutionDialogOpen, setSolutionDialogOpen] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [allTestsPassed, setAllTestsPassed] = useState(false);
+
+  const {
+    isComplete,
+    toggleComplete,
+  } = useCompletion(course.id, navigation.totalLessons, true);
+  const completed = isComplete(lesson.id);
+
   const testConfig = useMemo<ChallengeTestConfig | null>(
-    () => lessonToTestConfig(lesson.type, currentFiles, (lesson as { expectedOutput?: string }).expectedOutput, challengeValidation),
-    [lesson.type, currentFiles, (lesson as { expectedOutput?: string }).expectedOutput, challengeValidation],
+    () => lessonToTestConfig(lesson.type, currentFiles, (lesson as Record<string, unknown>).expectedOutput as string | undefined, challengeValidation),
+    [lesson.type, currentFiles, challengeValidation],
   );
 
+  const mockHints = (lesson as Record<string, unknown>).hints as string[] | undefined;
+  const hints = mockHints ?? [];
+
+  useEffect(() => {
+    setConsoleMessages([]);
+    setCurrentFiles(files);
+    setViewMode("editor");
+    setHintsVisible(false);
+    setSolutionDialogOpen(false);
+    setRunning(false);
+    setAllTestsPassed(false);
+  }, [lessonSlug, files]);
 
   const handleFilesChange = useCallback((updatedFiles: EditorFile[]) => {
     setCurrentFiles(updatedFiles);
@@ -209,349 +239,211 @@ function LessonView() {
     setConsoleMessages([]);
   }, []);
 
-  const handleRun = useCallback(
-    (editorFiles: EditorFile[]) => {
-      setCurrentFiles(editorFiles);
-      if (!isHtmlLesson) {
-        setViewMode("editor");
-        const mainFile = editorFiles.find((f) => f.path.endsWith(".js") || f.path.endsWith(".ts"));
-        const code = mainFile?.content ?? editorFiles[0]?.content ?? "";
-        setConsoleMessages((prev) => [
-          ...prev,
-          {
-            id: `run-${Date.now()}`,
-            method: "log",
-            args: [`> node ${lesson.id}.js`],
-            timestamp: Date.now(),
-          },
-        ]);
-        try {
-          const logs: string[] = [];
-          const sandbox = {
-            console: { log: (...args: unknown[]) => logs.push(args.map(String).join(" ")) },
-          };
-          new Function("console", code)(sandbox.console);
-          for (const line of logs) {
-            setConsoleMessages((prev) => [
-              ...prev,
-              {
-                id: `out-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                method: "log",
-                args: [line],
-                timestamp: Date.now(),
-              },
-            ]);
-          }
-          if (logs.length === 0 && lesson.expectedOutput) {
-            setConsoleMessages((prev) => [
-              ...prev,
-              {
-                id: `hint-${Date.now()}`,
-                method: "info",
-                args: ["(no output)"],
-                timestamp: Date.now(),
-              },
-            ]);
-          }
-          if (lesson.expectedOutput) {
-            const last = logs.join("\n").trim();
-            if (last === lesson.expectedOutput.trim()) {
-              setConsoleMessages((prev) => [
-                ...prev,
-                {
-                  id: `ok-${Date.now()}`,
-                  method: "info",
-                  args: ["✓ output matches expected — well done!"],
-                  timestamp: Date.now(),
-                },
-              ]);
-            } else if (last) {
-              setConsoleMessages((prev) => [
-                ...prev,
-                {
-                  id: `mismatch-${Date.now()}`,
-                  method: "warn",
-                  args: [`✗ expected: ${lesson.expectedOutput}`],
-                  timestamp: Date.now(),
-                },
-              ]);
-            }
-          }
-        } catch (error: unknown) {
+  const handleRun = useCallback(() => {
+    setRunning(true);
+    setAllTestsPassed(false);
+
+    if (!isHtmlLesson) {
+      setViewMode("editor");
+      const mainFile = currentFiles.find((f) => f.path.endsWith(".js") || f.path.endsWith(".ts"));
+      const code = mainFile?.content ?? currentFiles[0]?.content ?? "";
+      setConsoleMessages((prev) => [
+        ...prev,
+        {
+          id: `run-${Date.now()}`,
+          method: "log",
+          args: [`> node ${lesson.id}.js`],
+          timestamp: Date.now(),
+        },
+      ]);
+      try {
+        const logs: string[] = [];
+        const sandbox = { console: { log: (...args: unknown[]) => logs.push(args.map(String).join(" ")) } };
+        new Function("console", code)(sandbox.console);
+        for (const line of logs) {
           setConsoleMessages((prev) => [
             ...prev,
-            {
-              id: `err-${Date.now()}`,
-              method: "error",
-              args: [error instanceof Error ? error.message : "Unknown execution error"],
-              timestamp: Date.now(),
-            },
+            { id: `out-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, method: "log", args: [line], timestamp: Date.now() },
           ]);
         }
-      } else {
-        setViewMode("preview");
+        const expectedOutput = (lesson as Record<string, unknown>).expectedOutput as string | undefined;
+        if (logs.length === 0 && expectedOutput) {
+          setConsoleMessages((prev) => [
+            ...prev,
+            { id: `hint-${Date.now()}`, method: "info", args: ["(no output)"], timestamp: Date.now() },
+          ]);
+        }
+        if (expectedOutput) {
+          const last = logs.join("\n").trim();
+          if (last === expectedOutput.trim()) {
+            setConsoleMessages((prev) => [
+              ...prev,
+              { id: `ok-${Date.now()}`, method: "info", args: ["✓ Output matches expected"], timestamp: Date.now() },
+            ]);
+          } else if (last) {
+            setConsoleMessages((prev) => [
+              ...prev,
+              { id: `mismatch-${Date.now()}`, method: "warn", args: [`✗ Expected: ${expectedOutput}`], timestamp: Date.now() },
+            ]);
+          }
+        }
+      } catch (error: unknown) {
+        setConsoleMessages((prev) => [
+          ...prev,
+          { id: `err-${Date.now()}`, method: "error", args: [error instanceof Error ? error.message : "Unknown execution error"], timestamp: Date.now() },
+        ]);
       }
-    },
-    [isHtmlLesson, lesson.id, lesson.expectedOutput],
-  );
+    } else {
+      setViewMode("preview");
+    }
 
-  useEffect(() => {
-    setConsoleMessages([]);
-    setShowSolution(false);
-    setViewMode("editor");
-    setCurrentFiles(files);
-  }, [lessonSlug, files]);
+    setTimeout(() => setRunning(false), 300);
+  }, [isHtmlLesson, lesson.id, currentFiles]);
 
-  const fileExt =
-    isCoding ? (lesson.language === "tsx" ? "tsx" : "js") : isQuiz ? "quiz" : "md";
+  const handleReset = useCallback(() => {
+    editorRef.current?.resetFiles();
+  }, []);
 
-  const tabTitle = `${lesson.id}.${fileExt}`;
+  const handleToggleComplete = useCallback(() => {
+    toggleComplete(lesson.id);
+  }, [toggleComplete, lesson.id]);
 
-  return (
-    <AppShell
-      tabs={[
-        { id: course.id, title: `${course.id}.md`, path: `/learn/${course.id}`, icon: "text" },
-        {
-          id: lesson.id,
-          title: tabTitle,
-          path: `/learn/${course.id}/${lesson.id}`,
-          icon: lesson.type,
-        },
-      ]}
-      breadcrumbs={["vslearn", "learn", course.title, module.title, lesson.title]}
-      terminalContent={
-        hasCodingContent ? (
-          <ConsolePanel messages={consoleMessages} onClear={handleClearConsole} />
-        ) : (
-          <div>
-            <span className="text-syntax-function">vslearn</span>
-            <span className="text-syntax-keyword"> $ </span>
-            reading {lesson.id}.{fileExt}...
-            <div className="text-muted-foreground mt-1">› {lesson.duration} estimated</div>
-          </div>
-        )
-      }
-      testPanelContent={
-        hasCodingContent && testConfig ? (
-          <div className="h-full">
-            <ChallengeRunner
-              files={currentFiles}
-              config={testConfig}
-            />
-          </div>
-        ) : undefined
-      }
-    >
-      <article className="max-w-5xl mx-auto p-8">
-        <div className="text-xs font-mono text-muted-foreground">
-          {course.title} → {module.title}
-        </div>
-        <h1 className="text-3xl font-bold mt-1">{lesson.title}</h1>
-        <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground font-mono">
-          <span className="capitalize px-2 py-0.5 bg-secondary rounded border border-border">
-            {lesson.type}
-          </span>
-          <span>{lesson.duration}</span>
-          {hasCodingContent && (
-            <span className="text-muted-foreground/60">
-              {files.length} file{files.length !== 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
+  const handleTestComplete = useCallback((suite: { summary: { failed: number; errors: number; total: number } }) => {
+    if (suite.summary.failed === 0 && suite.summary.errors === 0 && suite.summary.total > 0) {
+      setAllTestsPassed(true);
+    }
+  }, []);
 
-        <div className="prose prose-invert max-w-none mt-8">
-          {lesson.content.split("\n\n").map((paragraph, index) => (
-            <p key={index} className="text-foreground/90 leading-relaxed mb-4 whitespace-pre-wrap">
-              {renderInline(paragraph)}
-            </p>
-          ))}
-        </div>
-
-        {lesson.type === "video" && (
-          <div className="mt-6 aspect-video bg-card border border-border rounded-md flex items-center justify-center">
-            <button className="size-16 rounded-full bg-primary flex items-center justify-center hover:opacity-90 glow-primary">
-              <Play className="size-7 fill-current text-primary-foreground" />
-            </button>
-          </div>
-        )}
-
-        {hasCodingContent && (
-          <div className="mt-8 border border-border rounded-md overflow-hidden">
-            <div className="flex items-center border-b border-border bg-secondary">
-              <button
-                type="button"
-                onClick={() => setViewMode("editor")}
-                className={`px-4 py-2 text-xs font-mono border-r border-border ${viewMode === "editor" ? "bg-tab-active text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Editor
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("preview")}
-                className={`px-4 py-2 text-xs font-mono border-r border-border ${viewMode === "preview" ? "bg-tab-active text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Preview
-              </button>
-              <div className="flex-1" />
-              <button
-                type="button"
-                onClick={() => editorRef.current?.resetFiles()}
-                className="text-xs px-3 py-1.5 mr-1 text-muted-foreground hover:text-foreground"
-              >
-                Reset
-              </button>
-            </div>
-            <div className={viewMode === "editor" ? "block" : "hidden"}>
-              <div className="h-[500px]">
-                <EditorPanel
-                  ref={editorRef}
-                  files={files}
-                  starterFiles={sFiles.length > 0 ? sFiles : files}
-                  onFilesChange={handleFilesChange}
-                  onRun={handleRun}
-                  storageKey={`${course.id}_${lesson.id}`}
-                />
-              </div>
-            </div>
-            <div className={viewMode === "preview" ? "block" : "hidden"}>
-              <div className="h-[500px]">
-                <PreviewPanel
-                  files={currentFiles}
-                  onConsoleMessage={handleConsoleMessage}
-                  debounceMs={400}
-                />
-              </div>
-            </div>
-            {sFiles.length > 0 && (
-              <details className="border-t border-border" open={showSolution}>
-                <summary
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setShowSolution((v) => !v);
-                  }}
-                  className="px-4 py-2 text-xs cursor-pointer flex items-center gap-2 text-muted-foreground hover:text-foreground bg-secondary"
-                >
-                  <Lightbulb className="size-3.5" /> View solution
-                </summary>
-                <div className="p-3 space-y-3 max-h-72 overflow-y-auto">
-                  {sFiles.map((sf) => (
-                    <div key={sf.path}>
-                      <div className="text-[10px] font-mono text-muted-foreground mb-1">{sf.path}</div>
-                      <pre className="text-xs font-mono bg-editor border border-border rounded p-3 overflow-x-auto whitespace-pre-wrap">
-                        {sf.content}
-                      </pre>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-        )}
-
-        {isQuiz && "quiz" in lesson && lesson.quiz && <Quiz questions={lesson.quiz} />}
-
-        <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
-          {prev ? (
-            <Link
-              to="/learn/$courseSlug/$lessonSlug"
-              params={{ courseSlug: course.id, lessonSlug: prev.id }}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="size-4" /> {prev.title}
-            </Link>
-          ) : (
-            <span />
-          )}
-          {next ? (
-            <Link
-              to="/learn/$courseSlug/$lessonSlug"
-              params={{ courseSlug: course.id, lessonSlug: next.id }}
-              className="flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90"
-            >
-              Mark complete & next <ChevronRight className="size-4" />
-            </Link>
-          ) : (
-            <Link
-              to="/learn/$courseSlug"
-              params={{ courseSlug: course.id }}
-              className="flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90"
-            >
-              <CheckCircle2 className="size-4" /> Finish course
-            </Link>
-          )}
-        </div>
-      </article>
-    </AppShell>
-  );
-}
-
-function renderInline(text: string) {
-  const parts = text.split(/(`[^`]+`)/g);
-  return parts.map((part, index) =>
-    part.startsWith("`") && part.endsWith("`") ? (
-      <code
-        key={index}
-        className="font-mono text-sm bg-secondary border border-border rounded px-1.5 py-0.5 text-syntax-attr"
+  const workspaceNav = (
+    <div className="h-9 bg-sidebar-bg border-b border-border flex items-center px-3 gap-1 flex-shrink-0">
+      <button
+        type="button"
+        onClick={() => setViewMode("editor")}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-mono transition-colors ${
+          viewMode === "editor"
+            ? "bg-primary/10 text-primary border border-primary/30"
+            : "text-muted-foreground hover:text-foreground border border-transparent"
+        }`}
       >
-        {part.slice(1, -1)}
-      </code>
-    ) : (
-      <span key={index}>{part}</span>
-    ),
+        <Code className="size-3.5" /> Editor
+      </button>
+      <button
+        type="button"
+        onClick={() => setViewMode("preview")}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-mono transition-colors ${
+          viewMode === "preview"
+            ? "bg-primary/10 text-primary border border-primary/30"
+            : "text-muted-foreground hover:text-foreground border border-transparent"
+        }`}
+      >
+        <Eye className="size-3.5" /> Preview
+      </button>
+      <div className="flex-1" />
+      <button
+        type="button"
+        onClick={handleReset}
+        className="text-[10px] font-mono text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border bg-secondary"
+      >
+        Reset
+      </button>
+    </div>
   );
-}
 
-function Quiz({ questions }: { questions: { q: string; options: string[]; answer: number }[] }) {
-  const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [submitted, setSubmitted] = useState(false);
-  const score = Object.entries(answers).filter(
-    ([index, value]) => questions[+index].answer === value,
-  ).length;
+  const workspaceContent = viewMode === "editor" ? (
+    <EditorPanel
+      ref={editorRef}
+      files={files}
+      starterFiles={sFiles.length > 0 ? sFiles : files}
+      onFilesChange={handleFilesChange}
+      onRun={handleRun}
+      storageKey={`${course.id}_${lesson.id}`}
+    />
+  ) : (
+    <PreviewPanel
+      files={currentFiles}
+      onConsoleMessage={handleConsoleMessage}
+      debounceMs={400}
+    />
+  );
+
+  const bottomTabs: BottomPanelTab[] = [];
+  if (hasCodingContent) {
+    bottomTabs.push({
+      id: "terminal",
+      label: "TERMINAL",
+      content: <ConsolePanel messages={consoleMessages} onClear={handleClearConsole} />,
+    });
+    if (testConfig) {
+      bottomTabs.push({
+        id: "tests",
+        label: "TESTS",
+        content: (
+          <ChallengeRunner
+            files={currentFiles}
+            config={testConfig}
+            onSuiteComplete={handleTestComplete}
+          />
+        ),
+      });
+    }
+  }
+
+  const prev = navigation.prev;
+  const next = navigation.next;
 
   return (
-    <div className="mt-8 space-y-6">
-      {questions.map((question, questionIndex) => (
-        <div key={questionIndex} className="border border-border bg-card rounded-md p-5">
-          <div className="text-xs font-mono text-muted-foreground">
-            question {questionIndex + 1}
-          </div>
-          <div className="font-medium mt-1">{question.q}</div>
-          <div className="mt-3 space-y-2">
-            {question.options.map((option, optionIndex) => {
-              const selected = answers[questionIndex] === optionIndex;
-              const correct = submitted && question.answer === optionIndex;
-              const wrong = submitted && selected && question.answer !== optionIndex;
-              return (
-                <button
-                  key={optionIndex}
-                  disabled={submitted}
-                  onClick={() =>
-                    setAnswers((current) => ({ ...current, [questionIndex]: optionIndex }))
-                  }
-                  className={`w-full text-left px-3 py-2 rounded border text-sm font-mono ${correct ? "border-green-500 bg-green-500/10" : ""} ${wrong ? "border-destructive bg-destructive/10" : ""} ${!submitted && selected ? "border-primary bg-primary/10" : "border-border"} ${!submitted ? "hover:border-primary/50" : ""}`}
-                >
-                  {String.fromCharCode(65 + optionIndex)}. {option}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      {!submitted ? (
-        <button
-          disabled={Object.keys(answers).length !== questions.length}
-          onClick={() => setSubmitted(true)}
-          className="bg-primary text-primary-foreground px-5 py-2 rounded-md hover:opacity-90 disabled:opacity-50"
-        >
-          Submit quiz
-        </button>
-      ) : (
-        <div className="border border-primary bg-primary/10 rounded-md p-4 font-mono text-sm">
-          ✓ You scored{" "}
-          <span className="font-bold">
-            {score}/{questions.length}
-          </span>
-        </div>
+    <div className="h-screen w-full flex flex-col bg-background text-foreground overflow-hidden">
+      <LessonHeader
+        courseSlug={course.id}
+        lessonTitle={lesson.title}
+        moduleTitle={module.title}
+        courseTitle={course.title}
+        lessonType={lesson.type}
+        duration={lesson.duration}
+        fileCount={files.length}
+        prev={prev ? { id: prev.id, title: prev.title } : null}
+        next={next ? { id: next.id, title: next.title } : null}
+        completed={completed}
+        hintsVisible={hintsVisible}
+        hasSolution={hasSsolution}
+        running={running}
+        allTestsPassed={allTestsPassed}
+        onRun={handleRun}
+        onReset={handleReset}
+        onToggleHints={() => setHintsVisible((v) => !v)}
+        onRevealSolution={() => setSolutionDialogOpen(true)}
+        onToggleComplete={handleToggleComplete}
+      />
+      <div className="flex-1 min-h-0">
+        <LessonLayout
+          instructions={
+            <LessonInstructions
+              title={lesson.title}
+              content={lesson.content}
+              instructions={challengeInstructions}
+              hints={hints}
+              hintsVisible={hintsVisible}
+            />
+          }
+          workspace={
+            <div className="h-full flex flex-col">
+              {workspaceNav}
+              <div className="flex-1 min-h-0">
+                {workspaceContent}
+              </div>
+            </div>
+          }
+          bottomTabs={bottomTabs}
+          defaultBottomTab={testConfig ? "tests" : "terminal"}
+        />
+      </div>
+
+      {hasSsolution && (
+        <SolutionDialog
+          open={solutionDialogOpen}
+          onOpenChange={setSolutionDialogOpen}
+          solutionFiles={sFiles}
+        />
       )}
     </div>
   );
