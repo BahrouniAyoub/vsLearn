@@ -212,7 +212,7 @@ export function VSCodeShell({
             <ActivityIcon
               icon={<User className="size-5" />}
               label="Account"
-              link={user ? "/settings/account" : "/login"}
+              link={user ? "/settings/profile" : "/login"}
             />
             <ActivityIcon
               icon={<Settings className="size-5" />}

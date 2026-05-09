@@ -111,6 +111,12 @@ function AccountSettings() {
           <h2 className="font-semibold">Session</h2>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
+              to="/settings/profile"
+              className="border border-border bg-secondary px-4 py-2 rounded-md text-sm hover:bg-accent"
+            >
+              Edit profile
+            </Link>
+            <Link
               to="/dashboard"
               className="border border-border bg-secondary px-4 py-2 rounded-md text-sm hover:bg-accent"
             >

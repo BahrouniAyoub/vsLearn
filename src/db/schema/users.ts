@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { primaryId, timestamps } from "./common";
-import { userRoleEnum } from "./enums";
+import { profileVisibilityEnum, userRoleEnum } from "./enums";
 
 export const users = pgTable(
   "users",
@@ -43,11 +43,13 @@ export const profiles = pgTable(
     bio: text("bio"),
     websiteUrl: text("website_url"),
     location: varchar("location", { length: 160 }),
+    visibility: profileVisibilityEnum("visibility").default("public").notNull(),
     ...timestamps,
   },
   (table) => ({
     userIdx: uniqueIndex("profiles_user_id_idx").on(table.userId),
     usernameIdx: uniqueIndex("profiles_username_idx").on(table.username),
+    visibilityIdx: index("profiles_visibility_idx").on(table.visibility),
   }),
 );
 

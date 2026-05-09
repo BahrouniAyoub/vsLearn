@@ -1,6 +1,7 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["student", "instructor", "admin"]);
+export const profileVisibilityEnum = pgEnum("profile_visibility", ["public", "private"]);
 export const courseLevelEnum = pgEnum("course_level", ["beginner", "intermediate", "advanced"]);
 export const courseStatusEnum = pgEnum("course_status", ["draft", "published", "archived"]);
 export const lessonTypeEnum = pgEnum("lesson_type", ["text", "video", "quiz", "coding", "project"]);

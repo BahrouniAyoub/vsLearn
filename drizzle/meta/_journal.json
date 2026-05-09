@@ -22,6 +22,13 @@
       "when": 1778327000000,
       "tag": "0002_auth_profile_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778327100000,
+      "tag": "0003_profiles_and_public_projects",
+      "breakpoints": true
     }
   ]
 }

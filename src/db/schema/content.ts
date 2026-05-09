@@ -141,6 +141,7 @@ export const projects = pgTable(
   "projects",
   {
     id: primaryId(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
     courseId: uuid("course_id").references(() => courses.id, { onDelete: "cascade" }),
     lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "set null" }),
     slug: varchar("slug", { length: 160 }).notNull(),
@@ -148,10 +149,15 @@ export const projects = pgTable(
     description: text("description").notNull(),
     brief: text("brief").notNull(),
     rubric: jsonb("rubric").$type<Record<string, unknown>>().default({}).notNull(),
+    repositoryUrl: text("repository_url"),
+    demoUrl: text("demo_url"),
+    thumbnailUrl: text("thumbnail_url"),
+    isFeatured: boolean("is_featured").default(false).notNull(),
     isPublished: boolean("is_published").default(false).notNull(),
     ...timestamps,
   },
   (table) => ({
+    userIdx: index("projects_user_id_idx").on(table.userId),
     courseIdx: index("projects_course_id_idx").on(table.courseId),
     lessonIdx: index("projects_lesson_id_idx").on(table.lessonId),
     slugIdx: uniqueIndex("projects_slug_idx").on(table.slug),
@@ -185,6 +191,7 @@ export const lessonTestsRelations = relations(lessonTests, ({ one }) => ({
 }));
 
 export const projectsRelations = relations(projects, ({ one }) => ({
+  user: one(users, { fields: [projects.userId], references: [users.id] }),
   course: one(courses, { fields: [projects.courseId], references: [courses.id] }),
   lesson: one(lessons, { fields: [projects.lessonId], references: [lessons.id] }),
 }));
