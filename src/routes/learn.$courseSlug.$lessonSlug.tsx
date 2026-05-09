@@ -1,19 +1,29 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Lightbulb, Play, RotateCcw } from "lucide-react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Lightbulb,
+  Play,
+} from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { ProtectedRoute } from "@/lib/auth";
-import { findLesson } from "@/lib/vslearn/data";
-import { CodeBlock, Highlight } from "@/lib/vslearn/highlight";
+import { getCourseContent } from "@/lib/content";
+import { findLesson as findMockLesson } from "@/lib/vslearn/data";
+import { EditorPanel } from "@/components/editor";
+import type { EditorFile, EditorPanelHandle } from "@/components/editor";
+
+import type { CourseLesson, CourseContent, CourseModule } from "@/lib/content";
 
 export const Route = createFileRoute("/learn/$courseSlug/$lessonSlug")({
   head: ({ params }) => {
-    const found = findLesson(params.courseSlug, params.lessonSlug);
+    const data = getLessonMeta(params.courseSlug, params.lessonSlug);
     return {
       meta: [
-        { title: found ? `${found.lesson.title} - ${found.course.title}` : "Lesson - VSLearn" },
-        { name: "description", content: found?.lesson.content.slice(0, 150) ?? "VSLearn lesson." },
+        { title: data ? `${data.title} - ${data.courseTitle}` : "Lesson - VSLearn" },
+        { name: "description", content: data?.description ?? "VSLearn lesson." },
       ],
     };
   },
@@ -28,47 +38,198 @@ function LessonRoute() {
   );
 }
 
+type LessonData = {
+  course: { id: string; title: string; modules: { id: string; lessons: { id: string; title: string }[] }[] };
+  module: { id: string; title: string };
+  lesson: {
+    id: string;
+    title: string;
+    type: string;
+    duration: string;
+    content: string;
+    starterCode?: string;
+    solution?: string;
+    language?: string;
+    expectedOutput?: string;
+    quiz?: { q: string; options: string[]; answer: number }[];
+  };
+};
+
+type ContentLessonData = {
+  course: CourseContent;
+  module: CourseModule;
+  lesson: CourseLesson;
+};
+
+function getLessonMeta(courseSlug: string, lessonSlug: string) {
+  const content = getCourseContent(courseSlug);
+  if (content) {
+    for (const m of content.modules) {
+      const l = m.lessons.find((x) => x.slug === lessonSlug);
+      if (l) {
+        return {
+          title: l.frontmatter.title,
+          description: l.frontmatter.summary ?? l.body.slice(0, 150),
+          courseTitle: content.title,
+        };
+      }
+    }
+  }
+  const mock = findMockLesson(courseSlug, lessonSlug);
+  if (mock) {
+    return {
+      title: mock.lesson.title,
+      description: mock.lesson.content.slice(0, 150),
+      courseTitle: mock.course.title,
+    };
+  }
+  return null;
+}
+
+function toEditorFiles(lesson: {
+  type?: string;
+  starterCode?: string;
+  language?: string;
+  starterFiles?: EditorFile[];
+}): EditorFile[] {
+  if (lesson.starterFiles && lesson.starterFiles.length > 0) {
+    return lesson.starterFiles.map((f) => ({ ...f }));
+  }
+  if (lesson.starterCode != null && lesson.type === "coding") {
+    const lang = lesson.language ?? "javascript";
+    const ext = lang === "typescript" || lang === "tsx" ? "tsx" : "js";
+    return [{ path: `index.${ext}`, content: lesson.starterCode, language: lang }];
+  }
+  return [];
+}
+
+function solutionFiles(lesson: { solution?: string; language?: string; solutionFiles?: EditorFile[] }): EditorFile[] {
+  if (lesson.solutionFiles && lesson.solutionFiles.length > 0) {
+    return lesson.solutionFiles.map((f) => ({ ...f }));
+  }
+  if (lesson.solution) {
+    const lang = lesson.language ?? "javascript";
+    const ext = lang === "typescript" || lang === "tsx" ? "tsx" : "js";
+    return [{ path: `index.${ext}`, content: lesson.solution, language: lang }];
+  }
+  return [];
+}
+
 function LessonView() {
   const { courseSlug, lessonSlug } = Route.useParams();
-  const found = findLesson(courseSlug, lessonSlug);
-  if (!found) throw notFound();
-  const { course, module, lesson } = found;
 
-  const allLessons = course.modules.flatMap((item) => item.lessons);
+  const content = useMemo(() => getCourseContent(courseSlug), [courseSlug]);
+  const contentLesson = useMemo(() => {
+    if (!content) return null;
+    for (const m of content.modules) {
+      const l = m.lessons.find((x) => x.slug === lessonSlug);
+      if (l) return { course: content, module: m, lesson: l } as ContentLessonData;
+    }
+    return null;
+  }, [content, lessonSlug]);
+
+  const mockFound = useMemo(() => {
+    if (contentLesson) return null;
+    return findMockLesson(courseSlug, lessonSlug) as LessonData | null;
+  }, [contentLesson, courseSlug, lessonSlug]);
+
+  const displayData = useMemo(() => {
+    if (contentLesson) {
+      return {
+        course: { id: contentLesson.course.slug, title: contentLesson.course.title, modules: contentLesson.course.modules.map((m) => ({ id: m.slug, title: m.title, lessons: m.lessons.map((l) => ({ id: l.slug, title: l.frontmatter.title })) })) },
+        module: { id: contentLesson.module.slug, title: contentLesson.module.title },
+        lesson: {
+          id: contentLesson.lesson.slug,
+          title: contentLesson.lesson.frontmatter.title,
+          type: contentLesson.lesson.frontmatter.type,
+          duration: `${contentLesson.lesson.frontmatter.durationMinutes} min`,
+          content: contentLesson.lesson.body,
+          starterFiles: contentLesson.lesson.starterFiles.map((f) => ({ path: f.path, content: f.content, language: f.language })),
+          solutionFiles: contentLesson.lesson.solutionFiles.map((f) => ({ path: f.path, content: f.content, language: f.language })),
+        },
+      } as LessonData & { lesson: { starterFiles: EditorFile[]; solutionFiles: EditorFile[] } };
+    }
+    if (mockFound) {
+      return {
+        ...mockFound,
+        lesson: { ...mockFound.lesson, starterFiles: [], solutionFiles: [] },
+      };
+    }
+    return null;
+  }, [contentLesson, mockFound]);
+
+  if (!displayData) throw notFound();
+
+  const { course, module, lesson } = displayData;
+
+  const allLessons = course.modules.flatMap((m) => m.lessons);
   const idx = allLessons.findIndex((item) => item.id === lessonSlug);
   const prev = idx > 0 ? allLessons[idx - 1] : null;
   const next = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
 
-  const fileExt =
-    lesson.type === "coding"
-      ? lesson.language === "tsx"
-        ? "tsx"
-        : "js"
-      : lesson.type === "quiz"
-        ? "quiz"
-        : "md";
+  const files = useMemo(() => toEditorFiles(lesson), [lesson]);
+  const sFiles = useMemo(() => solutionFiles(lesson), [lesson]);
+
+  const editorRef = useRef<EditorPanelHandle>(null);
+
   const [output, setOutput] = useState("");
-  const [code, setCode] = useState(lesson.starterCode ?? "");
+  const [showSolution, setShowSolution] = useState(false);
+
+  const isCoding = lesson.type === "coding";
+  const isText = lesson.type === "text";
+  const isQuiz = lesson.type === "quiz";
+  const isHtmlLesson = files.some((f) => f.path.endsWith(".html"));
+
+  const runCode = useCallback(
+    (currentFiles: EditorFile[]) => {
+      if (isHtmlLesson) {
+        const html = currentFiles.find((f) => f.path.endsWith(".html"))?.content ?? "";
+        const css = currentFiles.find((f) => f.path.endsWith(".css"))?.content ?? "";
+        const js = currentFiles.find((f) => f.path.endsWith(".js"))?.content ?? "";
+        const full = `<!DOCTYPE html><html><head><style>${css}</style></head><body>${html}<script>${js}<\/script></body></html>`;
+        const blob = new Blob([full], { type: "text/html" });
+        setOutput(`Opening preview... (${currentFiles.length} files)`);
+        window.open(URL.createObjectURL(blob), "_blank");
+        return;
+      }
+
+      const mainFile = currentFiles.find((f) => f.path.endsWith(".js") || f.path.endsWith(".ts"));
+      const code = mainFile?.content ?? currentFiles[0]?.content ?? "";
+      try {
+        const logs: string[] = [];
+        const sandbox = { console: { log: (...args: unknown[]) => logs.push(args.map(String).join(" ")) } };
+        new Function("console", code)(sandbox.console);
+        setOutput(logs.join("\n") || "(no output)");
+      } catch (error: unknown) {
+        setOutput(`Error: ${error instanceof Error ? error.message : "Unknown execution error"}`);
+      }
+    },
+    [isHtmlLesson],
+  );
+
+  const handleRun = useCallback(
+    (currentFiles: EditorFile[]) => {
+      runCode(currentFiles);
+    },
+    [runCode],
+  );
 
   useEffect(() => {
-    setCode(lesson.starterCode ?? "");
     setOutput("");
-  }, [lessonSlug, lesson.starterCode]);
+    setShowSolution(false);
+  }, [lessonSlug]);
 
-  function runCode() {
-    try {
-      const logs: string[] = [];
-      const sandbox = {
-        console: { log: (...args: unknown[]) => logs.push(args.map(String).join(" ")) },
-      };
-      new Function("console", code)(sandbox.console);
-      setOutput(logs.join("\n") || "(no output)");
-    } catch (error: unknown) {
-      setOutput(`Error: ${error instanceof Error ? error.message : "Unknown execution error"}`);
-    }
-  }
+  const fileExt =
+    isCoding ? (lesson.language === "tsx" ? "tsx" : "js") : isQuiz ? "quiz" : "md";
 
-  const isCorrect = lesson.expectedOutput && output.trim() === lesson.expectedOutput.trim();
+  const isCorrect =
+    !isHtmlLesson && lesson.expectedOutput && output.trim() === lesson.expectedOutput.trim();
+
+  const tabTitle = isCoding
+    ? `${lesson.id}.${fileExt}`
+    : `${lesson.id}.${fileExt}`;
+
+  const hasCodingContent = isCoding && files.length > 0;
 
   return (
     <AppShell
@@ -76,23 +237,26 @@ function LessonView() {
         { id: course.id, title: `${course.id}.md`, path: `/learn/${course.id}`, icon: "text" },
         {
           id: lesson.id,
-          title: `${lesson.id}.${fileExt}`,
+          title: tabTitle,
           path: `/learn/${course.id}/${lesson.id}`,
           icon: lesson.type,
         },
       ]}
       breadcrumbs={["vslearn", "learn", course.title, module.title, lesson.title]}
       terminalContent={
-        lesson.type === "coding" ? (
+        hasCodingContent ? (
           <div className="space-y-1">
             <div>
               <span className="text-syntax-function">vslearn</span>
-              <span className="text-syntax-keyword"> $ </span>node {lesson.id}.js
+              <span className="text-syntax-keyword"> $ </span>
+              {isHtmlLesson ? "open preview" : `node ${lesson.id}.js`}
             </div>
             {output ? (
               <pre className="whitespace-pre-wrap">{output}</pre>
             ) : (
-              <div className="text-muted-foreground">› Click "Run" to execute your code.</div>
+              <div className="text-muted-foreground">
+                › Press <kbd className="px-1 bg-secondary rounded text-[10px]">Ctrl+Enter</kbd> to run your code.
+              </div>
             )}
             {isCorrect && (
               <div className="text-syntax-string">✓ output matches expected - well done!</div>
@@ -121,6 +285,11 @@ function LessonView() {
             {lesson.type}
           </span>
           <span>{lesson.duration}</span>
+          {hasCodingContent && (
+            <span className="text-muted-foreground/60">
+              {files.length} file{files.length !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
 
         <div className="prose prose-invert max-w-none mt-8">
@@ -139,58 +308,47 @@ function LessonView() {
           </div>
         )}
 
-        {lesson.type === "coding" && (
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-mono text-muted-foreground">
-                Editor - {lesson.id}.{fileExt}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCode(lesson.starterCode ?? "")}
-                  className="text-xs px-3 py-1.5 border border-border bg-secondary rounded-md hover:bg-accent flex items-center gap-1"
-                >
-                  <RotateCcw className="size-3" /> Reset
-                </button>
-                <button
-                  onClick={runCode}
-                  className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:opacity-90 flex items-center gap-1"
-                >
-                  <Play className="size-3 fill-current" /> Run
-                </button>
-              </div>
+        {hasCodingContent && (
+          <div className="mt-8 border border-border rounded-md overflow-hidden">
+            <div className="text-xs font-mono text-muted-foreground px-4 py-2 bg-secondary border-b border-border">
+              Editor — {lesson.id}
             </div>
-            <div className="border border-border rounded-md overflow-hidden bg-editor relative">
-              <textarea
-                value={code}
-                onChange={(event) => setCode(event.target.value)}
-                spellCheck={false}
-                className="w-full bg-transparent text-transparent caret-foreground font-mono text-[13px] leading-6 p-4 pl-12 outline-none absolute inset-0 resize-none z-10"
-                rows={Math.max(6, code.split("\n").length)}
+            <div className="h-[500px]">
+              <EditorPanel
+                ref={editorRef}
+                files={files}
+                starterFiles={sFiles.length > 0 ? sFiles : files}
+                onRun={handleRun}
+                storageKey={`${course.id}_${lesson.id}`}
               />
-              <pre className="font-mono text-[13px] leading-6 p-4 pl-12 pointer-events-none">
-                <Highlight code={code} />
-              </pre>
-              <div className="absolute left-0 top-0 bottom-0 w-10 bg-background/40 border-r border-border text-right pr-2 py-4 text-line-number text-[13px] leading-6 font-mono select-none">
-                {code.split("\n").map((_, index) => (
-                  <div key={index}>{index + 1}</div>
-                ))}
-              </div>
             </div>
-            {lesson.solution && (
-              <details className="mt-3 border border-border rounded-md bg-card">
-                <summary className="px-4 py-2 text-sm cursor-pointer flex items-center gap-2 text-muted-foreground hover:text-foreground">
-                  <Lightbulb className="size-4" /> View solution
+            {sFiles.length > 0 && (
+              <details className="border-t border-border" open={showSolution}>
+                <summary
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowSolution((v) => !v);
+                  }}
+                  className="px-4 py-2 text-xs cursor-pointer flex items-center gap-2 text-muted-foreground hover:text-foreground bg-secondary"
+                >
+                  <Lightbulb className="size-3.5" /> View solution
                 </summary>
-                <div className="p-2">
-                  <CodeBlock code={lesson.solution} />
+                <div className="p-3 space-y-3 max-h-72 overflow-y-auto">
+                  {sFiles.map((sf) => (
+                    <div key={sf.path}>
+                      <div className="text-[10px] font-mono text-muted-foreground mb-1">{sf.path}</div>
+                      <pre className="text-xs font-mono bg-editor border border-border rounded p-3 overflow-x-auto whitespace-pre-wrap">
+                        {sf.content}
+                      </pre>
+                    </div>
+                  ))}
                 </div>
               </details>
             )}
           </div>
         )}
 
-        {lesson.type === "quiz" && lesson.quiz && <Quiz questions={lesson.quiz} />}
+        {isQuiz && "quiz" in lesson && lesson.quiz && <Quiz questions={lesson.quiz} />}
 
         <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
           {prev ? (
