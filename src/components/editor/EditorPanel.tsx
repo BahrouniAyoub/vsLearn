@@ -115,15 +115,15 @@ export const EditorPanel = forwardRef<EditorPanelHandle, EditorPanelProps>(
     );
 
     const resetFiles = useCallback(() => {
-      setFileStates(
-        starterFiles.map((f) => ({ ...f })),
-      );
+      const reset = starterFiles.map((f) => ({ ...f }));
+      setFileStates(reset);
       if (autoSaveKey) {
         for (const f of starterFiles) {
           saveContent(`${autoSaveKey}:${f.path}`, f.content);
         }
       }
-    }, [starterFiles, autoSaveKey]);
+      onFilesChange?.(reset);
+    }, [starterFiles, autoSaveKey, onFilesChange]);
 
     const getFiles = useCallback(() => fileStates, [fileStates]);
 

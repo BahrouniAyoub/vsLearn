@@ -14,6 +14,8 @@ import { getCourseContent } from "@/lib/content";
 import { findLesson as findMockLesson } from "@/lib/vslearn/data";
 import { EditorPanel } from "@/components/editor";
 import type { EditorFile, EditorPanelHandle } from "@/components/editor";
+import { PreviewPanel, ConsolePanel } from "@/components/preview";
+import type { ConsoleMessage } from "@/components/preview";
 
 import type { CourseLesson, CourseContent, CourseModule } from "@/lib/content";
 
@@ -115,6 +117,8 @@ function solutionFiles(lesson: { solution?: string; language?: string; solutionF
   return [];
 }
 
+type ViewMode = "editor" | "preview";
+
 function LessonView() {
   const { courseSlug, lessonSlug } = Route.useParams();
 
@@ -172,64 +176,125 @@ function LessonView() {
 
   const editorRef = useRef<EditorPanelHandle>(null);
 
-  const [output, setOutput] = useState("");
+  const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
+  const [currentFiles, setCurrentFiles] = useState<EditorFile[]>(files);
   const [showSolution, setShowSolution] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("editor");
 
   const isCoding = lesson.type === "coding";
-  const isText = lesson.type === "text";
   const isQuiz = lesson.type === "quiz";
   const isHtmlLesson = files.some((f) => f.path.endsWith(".html"));
+  const hasCodingContent = isCoding && files.length > 0;
 
-  const runCode = useCallback(
-    (currentFiles: EditorFile[]) => {
-      if (isHtmlLesson) {
-        const html = currentFiles.find((f) => f.path.endsWith(".html"))?.content ?? "";
-        const css = currentFiles.find((f) => f.path.endsWith(".css"))?.content ?? "";
-        const js = currentFiles.find((f) => f.path.endsWith(".js"))?.content ?? "";
-        const full = `<!DOCTYPE html><html><head><style>${css}</style></head><body>${html}<script>${js}<\/script></body></html>`;
-        const blob = new Blob([full], { type: "text/html" });
-        setOutput(`Opening preview... (${currentFiles.length} files)`);
-        window.open(URL.createObjectURL(blob), "_blank");
-        return;
-      }
+  const handleFilesChange = useCallback((updatedFiles: EditorFile[]) => {
+    setCurrentFiles(updatedFiles);
+  }, []);
 
-      const mainFile = currentFiles.find((f) => f.path.endsWith(".js") || f.path.endsWith(".ts"));
-      const code = mainFile?.content ?? currentFiles[0]?.content ?? "";
-      try {
-        const logs: string[] = [];
-        const sandbox = { console: { log: (...args: unknown[]) => logs.push(args.map(String).join(" ")) } };
-        new Function("console", code)(sandbox.console);
-        setOutput(logs.join("\n") || "(no output)");
-      } catch (error: unknown) {
-        setOutput(`Error: ${error instanceof Error ? error.message : "Unknown execution error"}`);
-      }
-    },
-    [isHtmlLesson],
-  );
+  const handleConsoleMessage = useCallback((msg: ConsoleMessage) => {
+    setConsoleMessages((prev) => [...prev, msg]);
+  }, []);
+
+  const handleClearConsole = useCallback(() => {
+    setConsoleMessages([]);
+  }, []);
 
   const handleRun = useCallback(
-    (currentFiles: EditorFile[]) => {
-      runCode(currentFiles);
+    (editorFiles: EditorFile[]) => {
+      setCurrentFiles(editorFiles);
+      if (!isHtmlLesson) {
+        setViewMode("editor");
+        const mainFile = editorFiles.find((f) => f.path.endsWith(".js") || f.path.endsWith(".ts"));
+        const code = mainFile?.content ?? editorFiles[0]?.content ?? "";
+        setConsoleMessages((prev) => [
+          ...prev,
+          {
+            id: `run-${Date.now()}`,
+            method: "log",
+            args: [`> node ${lesson.id}.js`],
+            timestamp: Date.now(),
+          },
+        ]);
+        try {
+          const logs: string[] = [];
+          const sandbox = {
+            console: { log: (...args: unknown[]) => logs.push(args.map(String).join(" ")) },
+          };
+          new Function("console", code)(sandbox.console);
+          for (const line of logs) {
+            setConsoleMessages((prev) => [
+              ...prev,
+              {
+                id: `out-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                method: "log",
+                args: [line],
+                timestamp: Date.now(),
+              },
+            ]);
+          }
+          if (logs.length === 0 && lesson.expectedOutput) {
+            setConsoleMessages((prev) => [
+              ...prev,
+              {
+                id: `hint-${Date.now()}`,
+                method: "info",
+                args: ["(no output)"],
+                timestamp: Date.now(),
+              },
+            ]);
+          }
+          if (lesson.expectedOutput) {
+            const last = logs.join("\n").trim();
+            if (last === lesson.expectedOutput.trim()) {
+              setConsoleMessages((prev) => [
+                ...prev,
+                {
+                  id: `ok-${Date.now()}`,
+                  method: "info",
+                  args: ["✓ output matches expected — well done!"],
+                  timestamp: Date.now(),
+                },
+              ]);
+            } else if (last) {
+              setConsoleMessages((prev) => [
+                ...prev,
+                {
+                  id: `mismatch-${Date.now()}`,
+                  method: "warn",
+                  args: [`✗ expected: ${lesson.expectedOutput}`],
+                  timestamp: Date.now(),
+                },
+              ]);
+            }
+          }
+        } catch (error: unknown) {
+          setConsoleMessages((prev) => [
+            ...prev,
+            {
+              id: `err-${Date.now()}`,
+              method: "error",
+              args: [error instanceof Error ? error.message : "Unknown execution error"],
+              timestamp: Date.now(),
+            },
+          ]);
+        }
+      } else {
+        setViewMode("preview");
+      }
     },
-    [runCode],
+    [isHtmlLesson, lesson.id, lesson.expectedOutput],
   );
 
   useEffect(() => {
-    setOutput("");
+    setConsoleMessages([]);
     setShowSolution(false);
-  }, [lessonSlug]);
+    setViewMode("editor");
+    setCurrentFiles(files);
+  }, [lessonSlug, files]);
 
   const fileExt =
     isCoding ? (lesson.language === "tsx" ? "tsx" : "js") : isQuiz ? "quiz" : "md";
 
-  const isCorrect =
-    !isHtmlLesson && lesson.expectedOutput && output.trim() === lesson.expectedOutput.trim();
-
-  const tabTitle = isCoding
-    ? `${lesson.id}.${fileExt}`
-    : `${lesson.id}.${fileExt}`;
-
-  const hasCodingContent = isCoding && files.length > 0;
+  const tabTitle = `${lesson.id}.${fileExt}`;
 
   return (
     <AppShell
@@ -245,26 +310,7 @@ function LessonView() {
       breadcrumbs={["vslearn", "learn", course.title, module.title, lesson.title]}
       terminalContent={
         hasCodingContent ? (
-          <div className="space-y-1">
-            <div>
-              <span className="text-syntax-function">vslearn</span>
-              <span className="text-syntax-keyword"> $ </span>
-              {isHtmlLesson ? "open preview" : `node ${lesson.id}.js`}
-            </div>
-            {output ? (
-              <pre className="whitespace-pre-wrap">{output}</pre>
-            ) : (
-              <div className="text-muted-foreground">
-                › Press <kbd className="px-1 bg-secondary rounded text-[10px]">Ctrl+Enter</kbd> to run your code.
-              </div>
-            )}
-            {isCorrect && (
-              <div className="text-syntax-string">✓ output matches expected - well done!</div>
-            )}
-            {output && lesson.expectedOutput && !isCorrect && (
-              <div className="text-destructive">✗ expected: {lesson.expectedOutput}</div>
-            )}
-          </div>
+          <ConsolePanel messages={consoleMessages} onClear={handleClearConsole} />
         ) : (
           <div>
             <span className="text-syntax-function">vslearn</span>
@@ -275,7 +321,7 @@ function LessonView() {
         )
       }
     >
-      <article className="max-w-4xl mx-auto p-8">
+      <article className="max-w-5xl mx-auto p-8">
         <div className="text-xs font-mono text-muted-foreground">
           {course.title} → {module.title}
         </div>
@@ -310,17 +356,50 @@ function LessonView() {
 
         {hasCodingContent && (
           <div className="mt-8 border border-border rounded-md overflow-hidden">
-            <div className="text-xs font-mono text-muted-foreground px-4 py-2 bg-secondary border-b border-border">
-              Editor — {lesson.id}
+            <div className="flex items-center border-b border-border bg-secondary">
+              <button
+                type="button"
+                onClick={() => setViewMode("editor")}
+                className={`px-4 py-2 text-xs font-mono border-r border-border ${viewMode === "editor" ? "bg-tab-active text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Editor
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("preview")}
+                className={`px-4 py-2 text-xs font-mono border-r border-border ${viewMode === "preview" ? "bg-tab-active text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Preview
+              </button>
+              <div className="flex-1" />
+              <button
+                type="button"
+                onClick={() => editorRef.current?.resetFiles()}
+                className="text-xs px-3 py-1.5 mr-1 text-muted-foreground hover:text-foreground"
+              >
+                Reset
+              </button>
             </div>
-            <div className="h-[500px]">
-              <EditorPanel
-                ref={editorRef}
-                files={files}
-                starterFiles={sFiles.length > 0 ? sFiles : files}
-                onRun={handleRun}
-                storageKey={`${course.id}_${lesson.id}`}
-              />
+            <div className={viewMode === "editor" ? "block" : "hidden"}>
+              <div className="h-[500px]">
+                <EditorPanel
+                  ref={editorRef}
+                  files={files}
+                  starterFiles={sFiles.length > 0 ? sFiles : files}
+                  onFilesChange={handleFilesChange}
+                  onRun={handleRun}
+                  storageKey={`${course.id}_${lesson.id}`}
+                />
+              </div>
+            </div>
+            <div className={viewMode === "preview" ? "block" : "hidden"}>
+              <div className="h-[500px]">
+                <PreviewPanel
+                  files={currentFiles}
+                  onConsoleMessage={handleConsoleMessage}
+                  debounceMs={400}
+                />
+              </div>
             </div>
             {sFiles.length > 0 && (
               <details className="border-t border-border" open={showSolution}>
