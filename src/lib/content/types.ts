@@ -3,6 +3,7 @@ import type { z } from "zod";
 import type {
   challengeSchema,
   challengeTestSchema,
+  challengeValidationSchema,
   contentFileSchema,
   courseMetadataSchema,
   lessonFrontmatterSchema,
@@ -14,6 +15,7 @@ export type ModuleMetadata = z.infer<typeof moduleMetadataSchema>;
 export type LessonFrontmatter = z.infer<typeof lessonFrontmatterSchema>;
 export type Challenge = z.infer<typeof challengeSchema>;
 export type ChallengeTest = z.infer<typeof challengeTestSchema>;
+export type ChallengeValidation = z.infer<typeof challengeValidationSchema>;
 export type ContentFile = z.infer<typeof contentFileSchema>;
 
 export type ParsedMdxLesson = {

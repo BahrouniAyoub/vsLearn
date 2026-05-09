@@ -14,5 +14,100 @@
       "timeoutMs": 1000,
       "isHidden": false
     }
-  ]
+  ],
+  "validation": {
+    "html": [
+      {
+        "id": "html-doctype",
+        "name": "DOCTYPE declaration",
+        "type": "doctype",
+        "hint": "Start your HTML with <!DOCTYPE html>"
+      },
+      {
+        "id": "html-viewport",
+        "name": "Viewport meta tag",
+        "type": "meta",
+        "selector": "meta[name='viewport']",
+        "hint": "Add <meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+      }
+    ],
+    "dom": [
+      {
+        "id": "dom-header",
+        "name": "Header landmark",
+        "selector": "header",
+        "type": "exists",
+        "hint": "Add a <header> element for the site header"
+      },
+      {
+        "id": "dom-main",
+        "name": "Main landmark",
+        "selector": "main",
+        "type": "exists",
+        "hint": "Add a <main> element for the primary content"
+      },
+      {
+        "id": "dom-section",
+        "name": "Content section",
+        "selector": "section",
+        "type": "exists",
+        "hint": "Wrap the profile card content in a <section>"
+      },
+      {
+        "id": "dom-footer",
+        "name": "Footer landmark",
+        "selector": "footer",
+        "type": "exists",
+        "hint": "Add a <footer> element"
+      },
+      {
+        "id": "dom-heading",
+        "name": "Page heading",
+        "selector": "h1",
+        "type": "exists",
+        "hint": "The page should have an <h1> heading"
+      },
+      {
+        "id": "dom-link",
+        "name": "Call-to-action link",
+        "selector": "a[href]",
+        "type": "exists",
+        "hint": "Add an anchor <a> with an href attribute"
+      }
+    ],
+    "a11y": [
+      {
+        "id": "a11y-heading-order",
+        "name": "Heading order",
+        "type": "heading-order",
+        "hint": "Do not skip heading levels (e.g., h1 → h3)"
+      },
+      {
+        "id": "a11y-focusable",
+        "name": "Focusable elements",
+        "type": "focus",
+        "selector": "a, button",
+        "hint": "Add interactive elements that can receive keyboard focus"
+      }
+    ],
+    "css": [
+      {
+        "id": "css-card-border",
+        "name": "Card border radius",
+        "selector": ".card",
+        "property": "border-radius",
+        "expectedValue": "1rem",
+        "type": "property",
+        "hint": "Add border-radius: 1rem to the .card element"
+      },
+      {
+        "id": "css-card-bg",
+        "name": "Card background",
+        "selector": ".card",
+        "property": "background",
+        "type": "property",
+        "hint": "Add a background color to the .card element"
+      }
+    ]
+  }
 }

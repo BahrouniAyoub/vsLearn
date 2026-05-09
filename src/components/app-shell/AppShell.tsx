@@ -17,12 +17,14 @@ export function AppShell({
   tabs = [],
   breadcrumbs = [],
   terminalContent,
+  testPanelContent,
   explorerContent,
 }: {
   children: React.ReactNode;
   tabs?: WorkspaceTab[];
   breadcrumbs?: string[];
   terminalContent?: React.ReactNode;
+  testPanelContent?: React.ReactNode;
   explorerContent?: React.ReactNode;
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -115,7 +117,15 @@ export function AppShell({
             </div>
           )}
           <div className="flex-1 overflow-y-auto bg-editor">{children}</div>
-          <BottomPanel open={terminalOpen} onClose={() => setTerminalOpen(false)}>
+          <BottomPanel
+            open={terminalOpen}
+            onClose={() => setTerminalOpen(false)}
+            tabs={testPanelContent ? [
+              { id: "terminal", label: "TERMINAL", content: terminalContent },
+              { id: "tests", label: "TESTS", content: testPanelContent },
+            ] : undefined}
+            defaultTab={testPanelContent ? "tests" : "terminal"}
+          >
             {terminalContent}
           </BottomPanel>
         </main>

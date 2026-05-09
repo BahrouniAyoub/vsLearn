@@ -9,6 +9,7 @@ export { parseMdxLesson } from "./mdx";
 export type {
   Challenge,
   ChallengeTest,
+  ChallengeValidation,
   ContentFile,
   CourseContent,
   CourseLesson,

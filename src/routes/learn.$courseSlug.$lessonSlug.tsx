@@ -16,6 +16,10 @@ import { EditorPanel } from "@/components/editor";
 import type { EditorFile, EditorPanelHandle } from "@/components/editor";
 import { PreviewPanel, ConsolePanel } from "@/components/preview";
 import type { ConsoleMessage } from "@/components/preview";
+import { ChallengeRunner } from "@/components/challenges";
+import type { ChallengeTestConfig } from "@/lib/challenges";
+import { lessonToTestConfig } from "@/lib/challenges";
+import type { ChallengeValidation } from "@/lib/content";
 
 import type { CourseLesson, CourseContent, CourseModule } from "@/lib/content";
 
@@ -186,6 +190,13 @@ function LessonView() {
   const isHtmlLesson = files.some((f) => f.path.endsWith(".html"));
   const hasCodingContent = isCoding && files.length > 0;
 
+  const challengeValidation: ChallengeValidation | null | undefined = contentLesson?.lesson.challenge?.validation;
+  const testConfig = useMemo<ChallengeTestConfig | null>(
+    () => lessonToTestConfig(lesson.type, currentFiles, (lesson as { expectedOutput?: string }).expectedOutput, challengeValidation),
+    [lesson.type, currentFiles, (lesson as { expectedOutput?: string }).expectedOutput, challengeValidation],
+  );
+
+
   const handleFilesChange = useCallback((updatedFiles: EditorFile[]) => {
     setCurrentFiles(updatedFiles);
   }, []);
@@ -319,6 +330,16 @@ function LessonView() {
             <div className="text-muted-foreground mt-1">› {lesson.duration} estimated</div>
           </div>
         )
+      }
+      testPanelContent={
+        hasCodingContent && testConfig ? (
+          <div className="h-full">
+            <ChallengeRunner
+              files={currentFiles}
+              config={testConfig}
+            />
+          </div>
+        ) : undefined
       }
     >
       <article className="max-w-5xl mx-auto p-8">
