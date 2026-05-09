@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtectedRoute } from "@/lib/auth";
-import { courses, mockUser, courseProgress } from "@/lib/vslearn/data";
-import { Flame, Trophy, Target, TrendingUp, Clock } from "lucide-react";
+import { listCourseMetadata, getCourseContent } from "@/lib/content";
+import { useProgress } from "@/lib/progress";
+import { XPBar, StreakDisplay } from "@/components/progress";
+import { Clock, BookOpen, TrendingUp, Flame } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -23,9 +26,42 @@ function DashboardRoute() {
 }
 
 function Dashboard() {
-  const enrolled = mockUser.enrolledCourses
-    .map((id) => courses.find((c) => c.id === id)!)
-    .filter(Boolean);
+  const { userStats, streak, xpEvents, getCourseSummary } = useProgress();
+
+  const allCourses = useMemo(() => listCourseMetadata(), []);
+  const enrichedCourses = useMemo(
+    () =>
+      allCourses.map((c) => {
+        const content = getCourseContent(c.slug);
+        const totalLessons = content
+          ? content.modules.reduce((s, m) => s + m.lessons.length, 0)
+          : 0;
+        const summary = getCourseSummary(c.slug, totalLessons);
+        return { ...c, totalLessons, summary };
+      }),
+    [allCourses, getCourseSummary],
+  );
+
+  const inProgress = enrichedCourses.filter(
+    (c) => c.summary.percentComplete > 0 && c.summary.percentComplete < 100,
+  );
+  const completed = enrichedCourses.filter(
+    (c) => c.summary.percentComplete >= 100,
+  );
+  const notStarted = enrichedCourses.filter(
+    (c) => c.summary.percentComplete === 0,
+  );
+  const continueLearning = [...inProgress, ...completed];
+
+  const xpThisWeek = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    return xpEvents
+      .filter((e) => new Date(e.timestamp).getTime() > weekAgo)
+      .reduce((sum, e) => sum + e.amount, 0);
+  }, [xpEvents]);
+
+  const totalHours = Math.round(userStats.totalTimeSpent / 60);
+
   const tabs = [{ id: "dash", title: "dashboard.tsx", path: "/dashboard", icon: "coding" }];
 
   return (
@@ -38,10 +74,9 @@ function Dashboard() {
             <span className="text-syntax-function">vslearn</span>
             <span className="text-syntax-keyword"> $ </span>npm run learn
           </div>
-          <div className="text-syntax-comment">› Welcome back, {mockUser.name.split(" ")[0]}.</div>
+          <div className="text-syntax-comment">› Welcome back.</div>
           <div className="text-syntax-comment">
-            › {mockUser.completedLessons.length} lessons completed · {mockUser.badges.length} badges
-            earned
+            › {userStats.lessonsCompleted} lessons completed
           </div>
           <div className="text-syntax-string">✓ ready to continue</div>
         </div>
@@ -51,99 +86,142 @@ function Dashboard() {
         <div className="font-mono text-sm text-syntax-comment">
           // dashboard.tsx — your workspace
         </div>
-        <h1 className="text-3xl font-bold mt-1">Welcome back, {mockUser.name.split(" ")[0]} 👋</h1>
+        <h1 className="text-3xl font-bold mt-1">Welcome back</h1>
         <p className="text-muted-foreground mt-1">
           Pick up where you left off, or start something new.
         </p>
 
+        <div className="mt-6 mb-8">
+          <XPBar xp={userStats.xp} />
+        </div>
+
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-8">
-          <Stat icon={<Flame className="size-5 text-orange-400" />} label="Day streak" value="12" />
           <Stat
-            icon={<Target className="size-5 text-primary" />}
-            label="Lessons completed"
-            value={String(mockUser.completedLessons.length)}
+            icon={<Flame className="size-5 text-orange-400" />}
+            label="Day streak"
+            value={String(streak.currentStreak)}
           />
           <Stat
-            icon={<Trophy className="size-5 text-yellow-400" />}
-            label="Badges earned"
-            value={String(mockUser.badges.length)}
+            icon={<BookOpen className="size-5 text-primary" />}
+            label="Lessons completed"
+            value={String(userStats.lessonsCompleted)}
           />
           <Stat
             icon={<TrendingUp className="size-5 text-green-400" />}
+            label="Level"
+            value={String(userStats.level)}
+          />
+          <Stat
+            icon={<TrendingUp className="size-5 text-yellow-400" />}
             label="XP this week"
-            value="2,340"
+            value={xpThisWeek.toLocaleString()}
           />
         </div>
 
-        <h2 className="mt-12 text-xl font-semibold">Continue learning</h2>
-        <div className="mt-4 space-y-3">
-          {enrolled.map((c) => {
-            const p = courseProgress(c.id);
-            const firstLesson = c.modules[0]?.lessons[0];
-            return (
-              <Link
-                key={c.id}
-                to="/learn/$courseSlug/$lessonSlug"
-                params={{ courseSlug: c.id, lessonSlug: firstLesson?.id ?? "l1" }}
-                className="block border border-border bg-card rounded-md p-5 hover:border-primary/50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className="size-12 rounded-md flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{ background: `${c.color}20`, color: c.color }}
-                  >
-                    {c.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate">{c.title}</div>
-                    <div className="text-sm text-muted-foreground truncate">{c.description}</div>
-                  </div>
-                  <div className="text-right text-sm hidden sm:block">
-                    <div className="text-muted-foreground flex items-center gap-1 justify-end">
-                      <Clock className="size-3" /> {c.hours}h
-                    </div>
-                    <div className="font-semibold mt-1">{p}%</div>
-                  </div>
-                </div>
-                <div className="mt-4 h-1 bg-border rounded-full overflow-hidden">
-                  <div className="h-full bg-primary" style={{ width: `${p}%` }} />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        {streak.atRisk && (
+          <div className="mt-4 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-md text-sm text-amber-400 flex items-center gap-2">
+            <span>Complete a lesson today to keep your streak alive!</span>
+          </div>
+        )}
 
-        <h2 className="mt-12 text-xl font-semibold">Recommended next</h2>
-        <div className="mt-4 grid md:grid-cols-3 gap-3">
-          {courses
-            .filter((c) => !mockUser.enrolledCourses.includes(c.id))
-            .slice(0, 3)
-            .map((c) => (
-              <Link
-                key={c.id}
-                to="/courses/$id"
-                params={{ id: c.id }}
-                className="border border-border bg-card rounded-md p-5 hover:border-primary/50"
-              >
-                <div
-                  className="size-10 rounded-md flex items-center justify-center text-lg"
-                  style={{ background: `${c.color}20`, color: c.color }}
+        {continueLearning.length > 0 && (
+          <>
+            <h2 className="mt-12 text-xl font-semibold">Continue learning</h2>
+            <div className="mt-4 space-y-3">
+              {continueLearning.map((c) => {
+                const firstLesson =
+                  getCourseContent(c.slug)?.modules[0]?.lessons[0];
+                return (
+                  <Link
+                    key={c.slug}
+                    to="/learn/$courseSlug/$lessonSlug"
+                    params={{
+                      courseSlug: c.slug,
+                      lessonSlug: firstLesson?.slug ?? "",
+                    }}
+                    className="block border border-border bg-card rounded-md p-5 hover:border-primary/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="size-12 rounded-md flex items-center justify-center text-2xl flex-shrink-0"
+                        style={{
+                          background: `${c.color ?? "#888"}20`,
+                          color: c.color ?? "#888",
+                        }}
+                      >
+                        {c.icon ?? "📘"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold truncate">{c.title}</div>
+                        <div className="text-sm text-muted-foreground truncate">
+                          {c.description}
+                        </div>
+                      </div>
+                      <div className="text-right text-sm hidden sm:block">
+                        <div className="text-muted-foreground flex items-center gap-1 justify-end">
+                          <Clock className="size-3" /> {c.estimatedHours}h
+                        </div>
+                        <div className="font-semibold mt-1">
+                          {c.summary.percentComplete}%
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 h-1 bg-border rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${c.summary.percentComplete}%` }}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {notStarted.length > 0 && (
+          <>
+            <h2 className="mt-12 text-xl font-semibold">Recommended next</h2>
+            <div className="mt-4 grid md:grid-cols-3 gap-3">
+              {notStarted.slice(0, 3).map((c) => (
+                <Link
+                  key={c.slug}
+                  to="/courses/$id"
+                  params={{ id: c.slug }}
+                  className="border border-border bg-card rounded-md p-5 hover:border-primary/50"
                 >
-                  {c.icon}
-                </div>
-                <div className="font-semibold mt-3">{c.title}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {c.level} · {c.hours}h
-                </div>
-              </Link>
-            ))}
-        </div>
+                  <div
+                    className="size-10 rounded-md flex items-center justify-center text-lg"
+                    style={{
+                      background: `${c.color ?? "#888"}20`,
+                      color: c.color ?? "#888",
+                    }}
+                  >
+                    {c.icon ?? "📘"}
+                  </div>
+                  <div className="font-semibold mt-3">{c.title}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {c.level} · {c.estimatedHours}h
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </AppShell>
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Stat({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="border border-border bg-card rounded-md p-4">
       <div className="flex items-center justify-between">

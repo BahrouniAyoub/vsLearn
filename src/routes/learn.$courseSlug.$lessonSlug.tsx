@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { Play, Code, Eye, Loader2 } from "lucide-react";
+import { Code, Eye } from "lucide-react";
 
 import { ProtectedRoute } from "@/lib/auth";
 import { getCourseContent } from "@/lib/content";
@@ -13,6 +13,8 @@ import { ChallengeRunner } from "@/components/challenges";
 import type { ChallengeTestConfig } from "@/lib/challenges";
 import { lessonToTestConfig } from "@/lib/challenges";
 import { useCompletion } from "@/lib/workspace";
+import { useProgress } from "@/lib/progress";
+import { LessonTracker } from "@/components/progress";
 import { LessonLayout, LessonHeader, LessonInstructions, SolutionDialog } from "@/components/lesson";
 import type { BottomPanelTab } from "@/components/lesson";
 import type { ChallengeValidation, CourseLesson, CourseContent, CourseModule } from "@/lib/content";
@@ -209,6 +211,21 @@ function LessonView() {
   } = useCompletion(course.id, navigation.totalLessons, true);
   const completed = isComplete(lesson.id);
 
+  const progress = useProgress();
+  const lessonProg = progress.getLessonProgress(course.id, lesson.id);
+  const didMount = useRef(false);
+
+  useEffect(() => {
+    if (didMount.current) return;
+    didMount.current = true;
+    progress.startLesson(course.id, lesson.id);
+  }, [course.id, lesson.id, progress]);
+
+  const handleRecordTime = useCallback(
+    (seconds: number) => progress.recordTime(seconds),
+    [progress],
+  );
+
   const testConfig = useMemo<ChallengeTestConfig | null>(
     () => lessonToTestConfig(lesson.type, currentFiles, (lesson as Record<string, unknown>).expectedOutput as string | undefined, challengeValidation),
     [lesson.type, currentFiles, challengeValidation],
@@ -242,6 +259,7 @@ function LessonView() {
   const handleRun = useCallback(() => {
     setRunning(true);
     setAllTestsPassed(false);
+    progress.recordAttempt(course.id, lesson.id);
 
     if (!isHtmlLesson) {
       setViewMode("editor");
@@ -309,10 +327,16 @@ function LessonView() {
   }, [toggleComplete, lesson.id]);
 
   const handleTestComplete = useCallback((suite: { summary: { failed: number; errors: number; total: number } }) => {
-    if (suite.summary.failed === 0 && suite.summary.errors === 0 && suite.summary.total > 0) {
+    const { failed, errors, total } = suite.summary;
+    if (failed === 0 && errors === 0 && total > 0) {
       setAllTestsPassed(true);
+      const score = total;
+      progress.completeLesson(course.id, lesson.id, score, total);
+    } else if (total > 0) {
+      const passed = total - failed - errors;
+      progress.recordAttempt(course.id, lesson.id, passed, total);
     }
-  }, []);
+  }, [course.id, lesson.id, progress]);
 
   const workspaceNav = (
     <div className="h-9 bg-sidebar-bg border-b border-border flex items-center px-3 gap-1 flex-shrink-0">
