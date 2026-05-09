@@ -1,0 +1,7 @@
+{
+  "slug": "html-basics",
+  "title": "HTML Basics",
+  "description": "Start with semantic page structure and accessible markup.",
+  "sortOrder": 1,
+  "lessons": ["introduction"]
+}

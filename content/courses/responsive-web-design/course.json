@@ -1,0 +1,13 @@
+{
+  "slug": "responsive-web-design",
+  "title": "Responsive Web Design",
+  "description": "Build accessible, responsive pages with semantic HTML, modern CSS, and practical layout techniques.",
+  "category": "HTML",
+  "level": "beginner",
+  "status": "published",
+  "icon": "🌐",
+  "color": "#e34f26",
+  "estimatedHours": 8,
+  "tags": ["html", "css", "responsive-design"],
+  "modules": ["html-basics"]
+}

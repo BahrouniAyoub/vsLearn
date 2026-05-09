@@ -1,0 +1,18 @@
+{
+  "id": "semantic-profile-card",
+  "title": "Build a semantic profile card",
+  "instructions": "Use semantic HTML landmarks and style the card so it works on narrow and wide screens.",
+  "entryFile": "index.html",
+  "starterFiles": ["index.html", "styles.css"],
+  "solutionFiles": ["index.html", "styles.css"],
+  "tests": [
+    {
+      "id": "semantic-landmarks",
+      "name": "Uses semantic landmarks",
+      "runner": "static",
+      "file": "tests/semantic-landmarks.test.ts",
+      "timeoutMs": 1000,
+      "isHidden": false
+    }
+  ]
+}

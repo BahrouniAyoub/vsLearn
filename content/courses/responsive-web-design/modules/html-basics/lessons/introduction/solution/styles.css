@@ -1,0 +1,32 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #111827;
+  color: #f9fafb;
+}
+
+.site-header,
+.site-footer {
+  padding: 1rem;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.page {
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.card {
+  width: min(100%, 32rem);
+  padding: 2rem;
+  border: 1px solid #374151;
+  border-radius: 1rem;
+  background: #1f2937;
+}
+
+.card a {
+  color: #60a5fa;
+}
