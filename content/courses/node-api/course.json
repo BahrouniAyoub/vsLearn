@@ -1,0 +1,13 @@
+{
+  "slug": "node-api",
+  "title": "Node.js REST APIs",
+  "description": "Design, build, and deploy production-grade REST APIs with Node.js.",
+  "category": "Node.js",
+  "level": "intermediate",
+  "status": "published",
+  "icon": "⬢",
+  "color": "#68a063",
+  "estimatedHours": 10,
+  "tags": ["node", "api", "backend"],
+  "modules": ["express-basics"]
+}

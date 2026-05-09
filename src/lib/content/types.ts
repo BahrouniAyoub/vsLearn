@@ -22,7 +22,7 @@ export type ParsedMdxLesson = {
   raw: string;
 };
 
-export type CourseModule = ModuleMetadata & {
+export type CourseModule = Omit<ModuleMetadata, "lessons"> & {
   courseSlug: string;
   lessons: CourseLesson[];
 };
@@ -37,6 +37,6 @@ export type CourseLesson = ParsedMdxLesson & {
   testFiles: ContentFile[];
 };
 
-export type CourseContent = CourseMetadata & {
+export type CourseContent = Omit<CourseMetadata, "modules"> & {
   modules: CourseModule[];
 };

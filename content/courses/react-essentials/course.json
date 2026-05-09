@@ -1,0 +1,13 @@
+{
+  "slug": "react-essentials",
+  "title": "React Essentials",
+  "description": "Build modern, reactive interfaces with hooks, state, and components.",
+  "category": "React",
+  "level": "intermediate",
+  "status": "published",
+  "icon": "⚛",
+  "color": "#61dafb",
+  "estimatedHours": 16,
+  "tags": ["react", "frontend", "ui"],
+  "modules": ["components-jsx"]
+}

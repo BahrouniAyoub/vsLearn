@@ -1,0 +1,7 @@
+{
+  "slug": "getting-started",
+  "title": "Getting Started",
+  "description": "Your first steps with JavaScript.",
+  "sortOrder": 1,
+  "lessons": ["hello-javascript", "variables-types", "quiz-basics"]
+}

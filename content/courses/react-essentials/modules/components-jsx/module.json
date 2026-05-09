@@ -1,0 +1,7 @@
+{
+  "slug": "components-jsx",
+  "title": "Components & JSX",
+  "description": "Build your first React components with JSX syntax.",
+  "sortOrder": 1,
+  "lessons": ["first-component", "hooks-state"]
+}

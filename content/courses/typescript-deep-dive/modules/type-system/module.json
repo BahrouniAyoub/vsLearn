@@ -1,0 +1,7 @@
+{
+  "slug": "type-system",
+  "title": "Type System",
+  "description": "Master TypeScript's type system including unions, narrowing, and generics.",
+  "sortOrder": 1,
+  "lessons": ["unions-narrowing"]
+}

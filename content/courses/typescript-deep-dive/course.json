@@ -1,0 +1,13 @@
+{
+  "slug": "typescript-deep-dive",
+  "title": "TypeScript Deep Dive",
+  "description": "Generics, conditional types, and patterns used by the best teams.",
+  "category": "TypeScript",
+  "level": "advanced",
+  "status": "published",
+  "icon": "TS",
+  "color": "#3178c6",
+  "estimatedHours": 14,
+  "tags": ["typescript", "types", "advanced"],
+  "modules": ["type-system"]
+}

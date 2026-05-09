@@ -1,0 +1,7 @@
+{
+  "slug": "express-basics",
+  "title": "Express Basics",
+  "description": "Get started with the Express framework for Node.js.",
+  "sortOrder": 1,
+  "lessons": ["first-route"]
+}

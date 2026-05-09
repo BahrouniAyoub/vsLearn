@@ -1,0 +1,13 @@
+{
+  "slug": "javascript-fundamentals",
+  "title": "JavaScript Fundamentals",
+  "description": "Master the language that powers the modern web — from variables to async/await.",
+  "category": "JavaScript",
+  "level": "beginner",
+  "status": "published",
+  "icon": "⚡",
+  "color": "#f7df1e",
+  "estimatedHours": 12,
+  "tags": ["javascript", "web", "beginner"],
+  "modules": ["getting-started"]
+}
