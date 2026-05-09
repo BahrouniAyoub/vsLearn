@@ -1,17 +1,18 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { VSCodeShell } from "@/components/vscode/VSCodeShell";
-import { ProtectedRoute } from "@/lib/auth";
-import { findLesson, findCourse } from "@/lib/vslearn/data";
-import { CodeBlock, Highlight } from "@/lib/vslearn/highlight";
-import { Play, ChevronLeft, ChevronRight, CheckCircle2, RotateCcw, Lightbulb } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Lightbulb, Play, RotateCcw } from "lucide-react";
 
-export const Route = createFileRoute("/learn/$courseId/$lessonId")({
+import { AppShell } from "@/components/app-shell";
+import { ProtectedRoute } from "@/lib/auth";
+import { findLesson } from "@/lib/vslearn/data";
+import { CodeBlock, Highlight } from "@/lib/vslearn/highlight";
+
+export const Route = createFileRoute("/learn/$courseSlug/$lessonSlug")({
   head: ({ params }) => {
-    const found = findLesson(params.courseId, params.lessonId);
+    const found = findLesson(params.courseSlug, params.lessonSlug);
     return {
       meta: [
-        { title: found ? `${found.lesson.title} — ${found.course.title}` : "Lesson — VSLearn" },
+        { title: found ? `${found.lesson.title} - ${found.course.title}` : "Lesson - VSLearn" },
         { name: "description", content: found?.lesson.content.slice(0, 150) ?? "VSLearn lesson." },
       ],
     };
@@ -28,14 +29,13 @@ function LessonRoute() {
 }
 
 function LessonView() {
-  const { courseId, lessonId } = Route.useParams();
-  const found = findLesson(courseId, lessonId);
+  const { courseSlug, lessonSlug } = Route.useParams();
+  const found = findLesson(courseSlug, lessonSlug);
   if (!found) throw notFound();
   const { course, module, lesson } = found;
 
-  // navigation
-  const allLessons = course.modules.flatMap((m) => m.lessons);
-  const idx = allLessons.findIndex((l) => l.id === lessonId);
+  const allLessons = course.modules.flatMap((item) => item.lessons);
+  const idx = allLessons.findIndex((item) => item.id === lessonSlug);
   const prev = idx > 0 ? allLessons[idx - 1] : null;
   const next = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
 
@@ -47,25 +47,15 @@ function LessonView() {
       : lesson.type === "quiz"
         ? "quiz"
         : "md";
-
-  const tabs = [
-    { id: course.id, title: `${course.id}.md`, path: `/courses/${course.id}`, icon: "text" },
-    {
-      id: lesson.id,
-      title: `${lesson.id}.${fileExt}`,
-      path: `/learn/${course.id}/${lesson.id}`,
-      icon: lesson.type,
-    },
-  ];
-
-  const [output, setOutput] = useState<string>("");
+  const [output, setOutput] = useState("");
   const [code, setCode] = useState(lesson.starterCode ?? "");
+
   useEffect(() => {
     setCode(lesson.starterCode ?? "");
     setOutput("");
-  }, [lessonId, lesson.starterCode]);
+  }, [lessonSlug, lesson.starterCode]);
 
-  const runCode = () => {
+  function runCode() {
     try {
       const logs: string[] = [];
       const sandbox = {
@@ -73,17 +63,25 @@ function LessonView() {
       };
       new Function("console", code)(sandbox.console);
       setOutput(logs.join("\n") || "(no output)");
-    } catch (e: unknown) {
-      setOutput(`Error: ${e instanceof Error ? e.message : "Unknown execution error"}`);
+    } catch (error: unknown) {
+      setOutput(`Error: ${error instanceof Error ? error.message : "Unknown execution error"}`);
     }
-  };
+  }
 
   const isCorrect = lesson.expectedOutput && output.trim() === lesson.expectedOutput.trim();
 
   return (
-    <VSCodeShell
-      tabs={tabs}
-      breadcrumbs={["vslearn", course.title, module.title, lesson.title]}
+    <AppShell
+      tabs={[
+        { id: course.id, title: `${course.id}.md`, path: `/learn/${course.id}`, icon: "text" },
+        {
+          id: lesson.id,
+          title: `${lesson.id}.${fileExt}`,
+          path: `/learn/${course.id}/${lesson.id}`,
+          icon: lesson.type,
+        },
+      ]}
+      breadcrumbs={["vslearn", "learn", course.title, module.title, lesson.title]}
       terminalContent={
         lesson.type === "coding" ? (
           <div className="space-y-1">
@@ -97,7 +95,7 @@ function LessonView() {
               <div className="text-muted-foreground">› Click "Run" to execute your code.</div>
             )}
             {isCorrect && (
-              <div className="text-syntax-string">✓ output matches expected — well done!</div>
+              <div className="text-syntax-string">✓ output matches expected - well done!</div>
             )}
             {output && lesson.expectedOutput && !isCorrect && (
               <div className="text-destructive">✗ expected: {lesson.expectedOutput}</div>
@@ -107,7 +105,7 @@ function LessonView() {
           <div>
             <span className="text-syntax-function">vslearn</span>
             <span className="text-syntax-keyword"> $ </span>
-            reading {lesson.id}.{fileExt}…
+            reading {lesson.id}.{fileExt}...
             <div className="text-muted-foreground mt-1">› {lesson.duration} estimated</div>
           </div>
         )
@@ -126,9 +124,9 @@ function LessonView() {
         </div>
 
         <div className="prose prose-invert max-w-none mt-8">
-          {lesson.content.split("\n\n").map((p, i) => (
-            <p key={i} className="text-foreground/90 leading-relaxed mb-4 whitespace-pre-wrap">
-              {renderInline(p)}
+          {lesson.content.split("\n\n").map((paragraph, index) => (
+            <p key={index} className="text-foreground/90 leading-relaxed mb-4 whitespace-pre-wrap">
+              {renderInline(paragraph)}
             </p>
           ))}
         </div>
@@ -145,7 +143,7 @@ function LessonView() {
           <div className="mt-8">
             <div className="flex items-center justify-between mb-2">
               <div className="text-xs font-mono text-muted-foreground">
-                Editor — {lesson.id}.{fileExt}
+                Editor - {lesson.id}.{fileExt}
               </div>
               <div className="flex gap-2">
                 <button
@@ -165,7 +163,7 @@ function LessonView() {
             <div className="border border-border rounded-md overflow-hidden bg-editor relative">
               <textarea
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(event) => setCode(event.target.value)}
                 spellCheck={false}
                 className="w-full bg-transparent text-transparent caret-foreground font-mono text-[13px] leading-6 p-4 pl-12 outline-none absolute inset-0 resize-none z-10"
                 rows={Math.max(6, code.split("\n").length)}
@@ -174,8 +172,8 @@ function LessonView() {
                 <Highlight code={code} />
               </pre>
               <div className="absolute left-0 top-0 bottom-0 w-10 bg-background/40 border-r border-border text-right pr-2 py-4 text-line-number text-[13px] leading-6 font-mono select-none">
-                {code.split("\n").map((_, i) => (
-                  <div key={i}>{i + 1}</div>
+                {code.split("\n").map((_, index) => (
+                  <div key={index}>{index + 1}</div>
                 ))}
               </div>
             </div>
@@ -197,8 +195,8 @@ function LessonView() {
         <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
           {prev ? (
             <Link
-              to="/learn/$courseId/$lessonId"
-              params={{ courseId, lessonId: prev.id }}
+              to="/learn/$courseSlug/$lessonSlug"
+              params={{ courseSlug: course.id, lessonSlug: prev.id }}
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft className="size-4" /> {prev.title}
@@ -208,16 +206,16 @@ function LessonView() {
           )}
           {next ? (
             <Link
-              to="/learn/$courseId/$lessonId"
-              params={{ courseId, lessonId: next.id }}
+              to="/learn/$courseSlug/$lessonSlug"
+              params={{ courseSlug: course.id, lessonSlug: next.id }}
               className="flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90"
             >
               Mark complete & next <ChevronRight className="size-4" />
             </Link>
           ) : (
             <Link
-              to="/courses/$id"
-              params={{ id: courseId }}
+              to="/learn/$courseSlug"
+              params={{ courseSlug: course.id }}
               className="flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90"
             >
               <CheckCircle2 className="size-4" /> Finish course
@@ -225,23 +223,22 @@ function LessonView() {
           )}
         </div>
       </article>
-    </VSCodeShell>
+    </AppShell>
   );
 }
 
-// Render inline code / bold inside paragraphs
 function renderInline(text: string) {
   const parts = text.split(/(`[^`]+`)/g);
-  return parts.map((p, i) =>
-    p.startsWith("`") && p.endsWith("`") ? (
+  return parts.map((part, index) =>
+    part.startsWith("`") && part.endsWith("`") ? (
       <code
-        key={i}
+        key={index}
         className="font-mono text-sm bg-secondary border border-border rounded px-1.5 py-0.5 text-syntax-attr"
       >
-        {p.slice(1, -1)}
+        {part.slice(1, -1)}
       </code>
     ) : (
-      <span key={i}>{p}</span>
+      <span key={index}>{part}</span>
     ),
   );
 }
@@ -249,31 +246,33 @@ function renderInline(text: string) {
 function Quiz({ questions }: { questions: { q: string; options: string[]; answer: number }[] }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
-  const score = Object.entries(answers).filter(([i, v]) => questions[+i].answer === v).length;
+  const score = Object.entries(answers).filter(
+    ([index, value]) => questions[+index].answer === value,
+  ).length;
 
   return (
     <div className="mt-8 space-y-6">
-      {questions.map((q, qi) => (
-        <div key={qi} className="border border-border bg-card rounded-md p-5">
-          <div className="text-xs font-mono text-muted-foreground">question {qi + 1}</div>
-          <div className="font-medium mt-1">{q.q}</div>
+      {questions.map((question, questionIndex) => (
+        <div key={questionIndex} className="border border-border bg-card rounded-md p-5">
+          <div className="text-xs font-mono text-muted-foreground">
+            question {questionIndex + 1}
+          </div>
+          <div className="font-medium mt-1">{question.q}</div>
           <div className="mt-3 space-y-2">
-            {q.options.map((opt, oi) => {
-              const selected = answers[qi] === oi;
-              const correct = submitted && q.answer === oi;
-              const wrong = submitted && selected && q.answer !== oi;
+            {question.options.map((option, optionIndex) => {
+              const selected = answers[questionIndex] === optionIndex;
+              const correct = submitted && question.answer === optionIndex;
+              const wrong = submitted && selected && question.answer !== optionIndex;
               return (
                 <button
-                  key={oi}
+                  key={optionIndex}
                   disabled={submitted}
-                  onClick={() => setAnswers((a) => ({ ...a, [qi]: oi }))}
-                  className={`w-full text-left px-3 py-2 rounded border text-sm font-mono
-                    ${correct ? "border-green-500 bg-green-500/10" : ""}
-                    ${wrong ? "border-destructive bg-destructive/10" : ""}
-                    ${!submitted && selected ? "border-primary bg-primary/10" : "border-border"}
-                    ${!submitted ? "hover:border-primary/50" : ""}`}
+                  onClick={() =>
+                    setAnswers((current) => ({ ...current, [questionIndex]: optionIndex }))
+                  }
+                  className={`w-full text-left px-3 py-2 rounded border text-sm font-mono ${correct ? "border-green-500 bg-green-500/10" : ""} ${wrong ? "border-destructive bg-destructive/10" : ""} ${!submitted && selected ? "border-primary bg-primary/10" : "border-border"} ${!submitted ? "hover:border-primary/50" : ""}`}
                 >
-                  {String.fromCharCode(65 + oi)}. {opt}
+                  {String.fromCharCode(65 + optionIndex)}. {option}
                 </button>
               );
             })}

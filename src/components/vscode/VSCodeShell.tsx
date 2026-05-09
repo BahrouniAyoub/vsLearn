@@ -96,8 +96,8 @@ export function VSCodeShell({
                   {m.lessons.map((l) => (
                     <Link
                       key={l.id}
-                      to="/learn/$courseId/$lessonId"
-                      params={{ courseId: cid, lessonId: l.id }}
+                      to="/learn/$courseSlug/$lessonSlug"
+                      params={{ courseSlug: cid, lessonSlug: l.id }}
                       className="flex items-center gap-2 px-2 py-1 hover:bg-accent/30 [&.active]:bg-accent/50"
                       activeProps={{ className: "active" }}
                     >

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LearnRouteImport } from './routes/learn'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CoursesRouteImport } from './routes/courses'
@@ -19,10 +20,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsAccountRouteImport } from './routes/settings.account'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as LearnCourseSlugRouteImport } from './routes/learn.$courseSlug'
 import { Route as CoursesIdRouteImport } from './routes/courses.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminCoursesRouteImport } from './routes/admin.courses'
-import { Route as LearnCourseIdLessonIdRouteImport } from './routes/learn.$courseId.$lessonId'
+import { Route as LearnCourseSlugLessonSlugRouteImport } from './routes/learn.$courseSlug.$lessonSlug'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -32,6 +34,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnRoute = LearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -74,6 +81,11 @@ const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   path: '/profile/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LearnCourseSlugRoute = LearnCourseSlugRouteImport.update({
+  id: '/$courseSlug',
+  path: '/$courseSlug',
+  getParentRoute: () => LearnRoute,
+} as any)
 const CoursesIdRoute = CoursesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -89,11 +101,12 @@ const AdminCoursesRoute = AdminCoursesRouteImport.update({
   path: '/courses',
   getParentRoute: () => AdminRoute,
 } as any)
-const LearnCourseIdLessonIdRoute = LearnCourseIdLessonIdRouteImport.update({
-  id: '/learn/$courseId/$lessonId',
-  path: '/learn/$courseId/$lessonId',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const LearnCourseSlugLessonSlugRoute =
+  LearnCourseSlugLessonSlugRouteImport.update({
+    id: '/$lessonSlug',
+    path: '/$lessonSlug',
+    getParentRoute: () => LearnCourseSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,15 +114,17 @@ export interface FileRoutesByFullPath {
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/learn': typeof LearnRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin/courses': typeof AdminCoursesRoute
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/learn/$courseSlug': typeof LearnCourseSlugRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
-  '/learn/$courseId/$lessonId': typeof LearnCourseIdLessonIdRoute
+  '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,15 +132,17 @@ export interface FileRoutesByTo {
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/learn': typeof LearnRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin/courses': typeof AdminCoursesRoute
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/learn/$courseSlug': typeof LearnCourseSlugRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
-  '/learn/$courseId/$lessonId': typeof LearnCourseIdLessonIdRoute
+  '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,15 +151,17 @@ export interface FileRoutesById {
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/learn': typeof LearnRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin/courses': typeof AdminCoursesRoute
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/learn/$courseSlug': typeof LearnCourseSlugRouteWithChildren
   '/profile/$username': typeof ProfileUsernameRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
-  '/learn/$courseId/$lessonId': typeof LearnCourseIdLessonIdRoute
+  '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -152,15 +171,17 @@ export interface FileRouteTypes {
     | '/courses'
     | '/dashboard'
     | '/forgot-password'
+    | '/learn'
     | '/login'
     | '/register'
     | '/admin/courses'
     | '/admin/users'
     | '/courses/$id'
+    | '/learn/$courseSlug'
     | '/profile/$username'
     | '/settings/account'
     | '/settings/profile'
-    | '/learn/$courseId/$lessonId'
+    | '/learn/$courseSlug/$lessonSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -168,15 +189,17 @@ export interface FileRouteTypes {
     | '/courses'
     | '/dashboard'
     | '/forgot-password'
+    | '/learn'
     | '/login'
     | '/register'
     | '/admin/courses'
     | '/admin/users'
     | '/courses/$id'
+    | '/learn/$courseSlug'
     | '/profile/$username'
     | '/settings/account'
     | '/settings/profile'
-    | '/learn/$courseId/$lessonId'
+    | '/learn/$courseSlug/$lessonSlug'
   id:
     | '__root__'
     | '/'
@@ -184,15 +207,17 @@ export interface FileRouteTypes {
     | '/courses'
     | '/dashboard'
     | '/forgot-password'
+    | '/learn'
     | '/login'
     | '/register'
     | '/admin/courses'
     | '/admin/users'
     | '/courses/$id'
+    | '/learn/$courseSlug'
     | '/profile/$username'
     | '/settings/account'
     | '/settings/profile'
-    | '/learn/$courseId/$lessonId'
+    | '/learn/$courseSlug/$lessonSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,12 +226,12 @@ export interface RootRouteChildren {
   CoursesRoute: typeof CoursesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LearnRoute: typeof LearnRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
-  LearnCourseIdLessonIdRoute: typeof LearnCourseIdLessonIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -223,6 +248,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn': {
+      id: '/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -281,6 +313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/learn/$courseSlug': {
+      id: '/learn/$courseSlug'
+      path: '/$courseSlug'
+      fullPath: '/learn/$courseSlug'
+      preLoaderRoute: typeof LearnCourseSlugRouteImport
+      parentRoute: typeof LearnRoute
+    }
     '/courses/$id': {
       id: '/courses/$id'
       path: '/$id'
@@ -302,12 +341,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoursesRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/learn/$courseId/$lessonId': {
-      id: '/learn/$courseId/$lessonId'
-      path: '/learn/$courseId/$lessonId'
-      fullPath: '/learn/$courseId/$lessonId'
-      preLoaderRoute: typeof LearnCourseIdLessonIdRouteImport
-      parentRoute: typeof rootRouteImport
+    '/learn/$courseSlug/$lessonSlug': {
+      id: '/learn/$courseSlug/$lessonSlug'
+      path: '/$lessonSlug'
+      fullPath: '/learn/$courseSlug/$lessonSlug'
+      preLoaderRoute: typeof LearnCourseSlugLessonSlugRouteImport
+      parentRoute: typeof LearnCourseSlugRoute
     }
   }
 }
@@ -335,18 +374,40 @@ const CoursesRouteChildren: CoursesRouteChildren = {
 const CoursesRouteWithChildren =
   CoursesRoute._addFileChildren(CoursesRouteChildren)
 
+interface LearnCourseSlugRouteChildren {
+  LearnCourseSlugLessonSlugRoute: typeof LearnCourseSlugLessonSlugRoute
+}
+
+const LearnCourseSlugRouteChildren: LearnCourseSlugRouteChildren = {
+  LearnCourseSlugLessonSlugRoute: LearnCourseSlugLessonSlugRoute,
+}
+
+const LearnCourseSlugRouteWithChildren = LearnCourseSlugRoute._addFileChildren(
+  LearnCourseSlugRouteChildren,
+)
+
+interface LearnRouteChildren {
+  LearnCourseSlugRoute: typeof LearnCourseSlugRouteWithChildren
+}
+
+const LearnRouteChildren: LearnRouteChildren = {
+  LearnCourseSlugRoute: LearnCourseSlugRouteWithChildren,
+}
+
+const LearnRouteWithChildren = LearnRoute._addFileChildren(LearnRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   CoursesRoute: CoursesRouteWithChildren,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  LearnRoute: LearnRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
   SettingsAccountRoute: SettingsAccountRoute,
   SettingsProfileRoute: SettingsProfileRoute,
-  LearnCourseIdLessonIdRoute: LearnCourseIdLessonIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

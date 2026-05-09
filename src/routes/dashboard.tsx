@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { VSCodeShell } from "@/components/vscode/VSCodeShell";
+import { AppShell } from "@/components/app-shell";
 import { ProtectedRoute } from "@/lib/auth";
 import { courses, mockUser, courseProgress } from "@/lib/vslearn/data";
 import { Flame, Trophy, Target, TrendingUp, Clock } from "lucide-react";
@@ -29,7 +29,7 @@ function Dashboard() {
   const tabs = [{ id: "dash", title: "dashboard.tsx", path: "/dashboard", icon: "coding" }];
 
   return (
-    <VSCodeShell
+    <AppShell
       tabs={tabs}
       breadcrumbs={["vslearn", "src", "dashboard.tsx"]}
       terminalContent={
@@ -83,8 +83,8 @@ function Dashboard() {
             return (
               <Link
                 key={c.id}
-                to="/learn/$courseId/$lessonId"
-                params={{ courseId: c.id, lessonId: firstLesson?.id ?? "l1" }}
+                to="/learn/$courseSlug/$lessonSlug"
+                params={{ courseSlug: c.id, lessonSlug: firstLesson?.id ?? "l1" }}
                 className="block border border-border bg-card rounded-md p-5 hover:border-primary/50 transition-colors"
               >
                 <div className="flex items-center gap-4">
@@ -139,7 +139,7 @@ function Dashboard() {
             ))}
         </div>
       </div>
-    </VSCodeShell>
+    </AppShell>
   );
 }
 
