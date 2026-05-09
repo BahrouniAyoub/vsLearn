@@ -1,16 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { ProtectedRoute } from "@/lib/auth";
+import { ProtectedRoute, useAuth } from "@/lib/auth";
 import { listCourseMetadata, getCourseContent } from "@/lib/content";
 import type { CourseContent, CourseLesson, CourseMetadata } from "@/lib/content";
 import { useProgress } from "@/lib/progress";
 import type { CourseProgressSummary, XpEvent } from "@/lib/progress";
 import { XPBar, StreakDisplay } from "@/components/progress";
+import { useCertificates } from "@/lib/certificates";
+import type { Certificate } from "@/lib/certificates";
 import {
   Flame, BookOpen, TrendingUp, Clock, Award,
   Zap, ChevronRight, ExternalLink, GraduationCap,
-  Sparkles, type LucideIcon,
+  Sparkles, Loader2, ShieldCheck, type LucideIcon,
 } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
@@ -39,6 +41,11 @@ type EnrichedCourse = CourseMetadata & {
 
 function Dashboard() {
   const { userStats, streak, xpEvents, getCourseSummary } = useProgress();
+  const { user } = useAuth();
+  const { certificates, getCertificateForCourse, issueCertificateForCourse } = useCertificates();
+  const [issuingCourse, setIssuingCourse] = useState<string | null>(null);
+
+  const username = user?.user_metadata?.username ?? user?.email?.split("@")[0] ?? "user";
 
   const allCourses = useMemo(() => listCourseMetadata(), []);
   const courseContents = useMemo(
@@ -209,10 +216,61 @@ function Dashboard() {
               <GraduationCap className="size-4 text-yellow-400" />
               <h2 className="text-lg font-semibold">Earned certificates</h2>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {completedCourses.map((c) => (
-                <CertificateCard key={c.slug} course={c} />
-              ))}
+            <div className="space-y-2">
+              {completedCourses.map((c) => {
+                const cert = getCertificateForCourse(c.slug);
+                const allLessons = c.content
+                  ? c.content.modules.flatMap((m) => m.lessons)
+                  : [];
+                return (
+                  <div key={c.slug} className="flex items-center gap-3 bg-card border border-border rounded-lg p-4">
+                    <div className="size-10 rounded-lg bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center flex-shrink-0">
+                      {cert ? (
+                        <ShieldCheck className="size-5 text-yellow-400" />
+                      ) : (
+                        <GraduationCap className="size-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm truncate">{c.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {cert
+                          ? `Certificate · ${new Date(cert.issuedAt).toLocaleDateString()}`
+                          : `${c.summary.percentComplete}% complete — all lessons done!`}
+                      </div>
+                    </div>
+                    {cert ? (
+                      <Link
+                        to="/certificate/$username/$certificateSlug"
+                        params={{ username: cert.username, certificateSlug: cert.verificationSlug }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded-md border border-border bg-secondary hover:bg-accent transition-colors"
+                      >
+                        <ExternalLink className="size-3.5" />
+                        View
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={issuingCourse === c.slug}
+                        onClick={() => {
+                          setIssuingCourse(c.slug);
+                          const lessonSlugs = allLessons.map((l) => l.slug);
+                          issueCertificateForCourse(c.slug, c.title, lessonSlugs);
+                          setTimeout(() => setIssuingCourse(null), 500);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded-md border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                      >
+                        {issuingCourse === c.slug ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Award className="size-3.5" />
+                        )}
+                        Get certificate
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -319,29 +377,6 @@ function CourseProgressCard({ course, nextLesson }: { course: EnrichedCourse; ne
           <span className="truncate">{nextLesson.frontmatter.title}</span>
         </div>
       )}
-    </Link>
-  );
-}
-
-function CertificateCard({ course }: { course: EnrichedCourse }) {
-  return (
-    <Link
-      to="/courses/$id"
-      params={{ id: course.slug }}
-      className="group bg-card border border-border rounded-lg p-4 hover:border-yellow-400/40 transition-all"
-    >
-      <div className="flex items-center gap-3">
-        <div className="size-10 rounded-lg bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center flex-shrink-0">
-          <GraduationCap className="size-5 text-yellow-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm truncate group-hover:text-yellow-400 transition-colors">
-            {course.title}
-          </div>
-          <div className="text-xs text-muted-foreground mt-0.5">Certificate earned</div>
-        </div>
-        <ExternalLink className="size-4 text-muted-foreground group-hover:text-yellow-400 transition-colors flex-shrink-0" />
-      </div>
     </Link>
   );
 }

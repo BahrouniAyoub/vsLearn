@@ -176,24 +176,34 @@ function PublicProfile() {
               title="Completed certificates"
               empty={certificates.length === 0 ? "No public certificates yet." : undefined}
             >
-              {certificates.map((certificate) => (
-                <div
-                  key={certificate.id}
-                  className="flex items-center justify-between border border-border rounded-md p-4"
-                >
-                  <div>
-                    <div className="font-semibold">
-                      {certificate.courses?.title ?? "Completed course"}
+              {certificates.map((certificate) => {
+                return (
+                  <Link
+                    key={certificate.id}
+                    to="/certificate/$username/$certificateSlug"
+                    params={{
+                      username: username,
+                      certificateSlug: certificate.verification_code,
+                    }}
+                    className="flex items-center justify-between border border-border rounded-md p-4 hover:border-primary/30 transition-colors group"
+                  >
+                    <div>
+                      <div className="font-semibold group-hover:text-primary transition-colors">
+                        {certificate.courses?.title ?? "Completed course"}
+                      </div>
+                      <div className="text-xs font-mono text-muted-foreground">
+                        #{certificate.certificate_number}
+                      </div>
                     </div>
-                    <div className="text-xs font-mono text-muted-foreground">
-                      #{certificate.certificate_number}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(certificate.issued_at).toLocaleDateString()}
+                      </span>
+                      <ExternalLink className="size-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(certificate.issued_at).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
+                  </Link>
+                );
+              })}
             </Panel>
 
             <Panel

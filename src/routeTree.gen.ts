@@ -25,6 +25,7 @@ import { Route as CoursesIdRouteImport } from './routes/courses.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminCoursesRouteImport } from './routes/admin.courses'
 import { Route as LearnCourseSlugLessonSlugRouteImport } from './routes/learn.$courseSlug.$lessonSlug'
+import { Route as CertificateUsernameCertificateSlugRouteImport } from './routes/certificate.$username.$certificateSlug'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -107,6 +108,12 @@ const LearnCourseSlugLessonSlugRoute =
     path: '/$lessonSlug',
     getParentRoute: () => LearnCourseSlugRoute,
   } as any)
+const CertificateUsernameCertificateSlugRoute =
+  CertificateUsernameCertificateSlugRouteImport.update({
+    id: '/certificate/$username/$certificateSlug',
+    path: '/certificate/$username/$certificateSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/profile/$username': typeof ProfileUsernameRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/certificate/$username/$certificateSlug': typeof CertificateUsernameCertificateSlugRoute
   '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
 }
 export interface FileRoutesByTo {
@@ -142,6 +150,7 @@ export interface FileRoutesByTo {
   '/profile/$username': typeof ProfileUsernameRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/certificate/$username/$certificateSlug': typeof CertificateUsernameCertificateSlugRoute
   '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
 }
 export interface FileRoutesById {
@@ -161,6 +170,7 @@ export interface FileRoutesById {
   '/profile/$username': typeof ProfileUsernameRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/certificate/$username/$certificateSlug': typeof CertificateUsernameCertificateSlugRoute
   '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
 }
 export interface FileRouteTypes {
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/settings/account'
     | '/settings/profile'
+    | '/certificate/$username/$certificateSlug'
     | '/learn/$courseSlug/$lessonSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/settings/account'
     | '/settings/profile'
+    | '/certificate/$username/$certificateSlug'
     | '/learn/$courseSlug/$lessonSlug'
   id:
     | '__root__'
@@ -217,6 +229,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/settings/account'
     | '/settings/profile'
+    | '/certificate/$username/$certificateSlug'
     | '/learn/$courseSlug/$lessonSlug'
   fileRoutesById: FileRoutesById
 }
@@ -232,6 +245,7 @@ export interface RootRouteChildren {
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
+  CertificateUsernameCertificateSlugRoute: typeof CertificateUsernameCertificateSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -348,6 +362,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearnCourseSlugLessonSlugRouteImport
       parentRoute: typeof LearnCourseSlugRoute
     }
+    '/certificate/$username/$certificateSlug': {
+      id: '/certificate/$username/$certificateSlug'
+      path: '/certificate/$username/$certificateSlug'
+      fullPath: '/certificate/$username/$certificateSlug'
+      preLoaderRoute: typeof CertificateUsernameCertificateSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -408,6 +429,8 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileUsernameRoute: ProfileUsernameRoute,
   SettingsAccountRoute: SettingsAccountRoute,
   SettingsProfileRoute: SettingsProfileRoute,
+  CertificateUsernameCertificateSlugRoute:
+    CertificateUsernameCertificateSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
