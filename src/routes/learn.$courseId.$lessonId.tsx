@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { VSCodeShell } from "@/components/vscode/VSCodeShell";
+import { ProtectedRoute } from "@/lib/auth";
 import { findLesson, findCourse } from "@/lib/vslearn/data";
 import { CodeBlock, Highlight } from "@/lib/vslearn/highlight";
 import { Play, ChevronLeft, ChevronRight, CheckCircle2, RotateCcw, Lightbulb } from "lucide-react";
@@ -15,8 +16,16 @@ export const Route = createFileRoute("/learn/$courseId/$lessonId")({
       ],
     };
   },
-  component: LessonView,
+  component: LessonRoute,
 });
+
+function LessonRoute() {
+  return (
+    <ProtectedRoute>
+      <LessonView />
+    </ProtectedRoute>
+  );
+}
 
 function LessonView() {
   const { courseId, lessonId } = Route.useParams();
@@ -30,11 +39,23 @@ function LessonView() {
   const prev = idx > 0 ? allLessons[idx - 1] : null;
   const next = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
 
-  const fileExt = lesson.type === "coding" ? (lesson.language === "tsx" ? "tsx" : "js") : lesson.type === "quiz" ? "quiz" : "md";
+  const fileExt =
+    lesson.type === "coding"
+      ? lesson.language === "tsx"
+        ? "tsx"
+        : "js"
+      : lesson.type === "quiz"
+        ? "quiz"
+        : "md";
 
   const tabs = [
-    { id: course.id, title: `${course.id}.md`, path: `/courses/${course.id}` as any, icon: "text" },
-    { id: lesson.id, title: `${lesson.id}.${fileExt}`, path: `/learn/${course.id}/${lesson.id}` as any, icon: lesson.type },
+    { id: course.id, title: `${course.id}.md`, path: `/courses/${course.id}`, icon: "text" },
+    {
+      id: lesson.id,
+      title: `${lesson.id}.${fileExt}`,
+      path: `/learn/${course.id}/${lesson.id}`,
+      icon: lesson.type,
+    },
   ];
 
   const [output, setOutput] = useState<string>("");
@@ -48,13 +69,12 @@ function LessonView() {
     try {
       const logs: string[] = [];
       const sandbox = {
-        console: { log: (...args: any[]) => logs.push(args.map(String).join(" ")) },
+        console: { log: (...args: unknown[]) => logs.push(args.map(String).join(" ")) },
       };
-      // eslint-disable-next-line no-new-func
       new Function("console", code)(sandbox.console);
       setOutput(logs.join("\n") || "(no output)");
-    } catch (e: any) {
-      setOutput(`Error: ${e.message}`);
+    } catch (e: unknown) {
+      setOutput(`Error: ${e instanceof Error ? e.message : "Unknown execution error"}`);
     }
   };
 
@@ -67,20 +87,26 @@ function LessonView() {
       terminalContent={
         lesson.type === "coding" ? (
           <div className="space-y-1">
-            <div><span className="text-syntax-function">vslearn</span><span className="text-syntax-keyword"> $ </span>node {lesson.id}.js</div>
+            <div>
+              <span className="text-syntax-function">vslearn</span>
+              <span className="text-syntax-keyword"> $ </span>node {lesson.id}.js
+            </div>
             {output ? (
               <pre className="whitespace-pre-wrap">{output}</pre>
             ) : (
               <div className="text-muted-foreground">› Click "Run" to execute your code.</div>
             )}
-            {isCorrect && <div className="text-syntax-string">✓ output matches expected — well done!</div>}
+            {isCorrect && (
+              <div className="text-syntax-string">✓ output matches expected — well done!</div>
+            )}
             {output && lesson.expectedOutput && !isCorrect && (
               <div className="text-destructive">✗ expected: {lesson.expectedOutput}</div>
             )}
           </div>
         ) : (
           <div>
-            <span className="text-syntax-function">vslearn</span><span className="text-syntax-keyword"> $ </span>
+            <span className="text-syntax-function">vslearn</span>
+            <span className="text-syntax-keyword"> $ </span>
             reading {lesson.id}.{fileExt}…
             <div className="text-muted-foreground mt-1">› {lesson.duration} estimated</div>
           </div>
@@ -93,7 +119,9 @@ function LessonView() {
         </div>
         <h1 className="text-3xl font-bold mt-1">{lesson.title}</h1>
         <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground font-mono">
-          <span className="capitalize px-2 py-0.5 bg-secondary rounded border border-border">{lesson.type}</span>
+          <span className="capitalize px-2 py-0.5 bg-secondary rounded border border-border">
+            {lesson.type}
+          </span>
           <span>{lesson.duration}</span>
         </div>
 
@@ -116,12 +144,20 @@ function LessonView() {
         {lesson.type === "coding" && (
           <div className="mt-8">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-mono text-muted-foreground">Editor — {lesson.id}.{fileExt}</div>
+              <div className="text-xs font-mono text-muted-foreground">
+                Editor — {lesson.id}.{fileExt}
+              </div>
               <div className="flex gap-2">
-                <button onClick={() => setCode(lesson.starterCode ?? "")} className="text-xs px-3 py-1.5 border border-border bg-secondary rounded-md hover:bg-accent flex items-center gap-1">
+                <button
+                  onClick={() => setCode(lesson.starterCode ?? "")}
+                  className="text-xs px-3 py-1.5 border border-border bg-secondary rounded-md hover:bg-accent flex items-center gap-1"
+                >
                   <RotateCcw className="size-3" /> Reset
                 </button>
-                <button onClick={runCode} className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:opacity-90 flex items-center gap-1">
+                <button
+                  onClick={runCode}
+                  className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:opacity-90 flex items-center gap-1"
+                >
                   <Play className="size-3 fill-current" /> Run
                 </button>
               </div>
@@ -138,7 +174,9 @@ function LessonView() {
                 <Highlight code={code} />
               </pre>
               <div className="absolute left-0 top-0 bottom-0 w-10 bg-background/40 border-r border-border text-right pr-2 py-4 text-line-number text-[13px] leading-6 font-mono select-none">
-                {code.split("\n").map((_, i) => <div key={i}>{i + 1}</div>)}
+                {code.split("\n").map((_, i) => (
+                  <div key={i}>{i + 1}</div>
+                ))}
               </div>
             </div>
             {lesson.solution && (
@@ -146,7 +184,9 @@ function LessonView() {
                 <summary className="px-4 py-2 text-sm cursor-pointer flex items-center gap-2 text-muted-foreground hover:text-foreground">
                   <Lightbulb className="size-4" /> View solution
                 </summary>
-                <div className="p-2"><CodeBlock code={lesson.solution} /></div>
+                <div className="p-2">
+                  <CodeBlock code={lesson.solution} />
+                </div>
               </details>
             )}
           </div>
@@ -156,16 +196,30 @@ function LessonView() {
 
         <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
           {prev ? (
-            <Link to="/learn/$courseId/$lessonId" params={{ courseId, lessonId: prev.id }} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <Link
+              to="/learn/$courseId/$lessonId"
+              params={{ courseId, lessonId: prev.id }}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            >
               <ChevronLeft className="size-4" /> {prev.title}
             </Link>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
           {next ? (
-            <Link to="/learn/$courseId/$lessonId" params={{ courseId, lessonId: next.id }} className="flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90">
+            <Link
+              to="/learn/$courseId/$lessonId"
+              params={{ courseId, lessonId: next.id }}
+              className="flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90"
+            >
               Mark complete & next <ChevronRight className="size-4" />
             </Link>
           ) : (
-            <Link to="/courses/$id" params={{ id: courseId }} className="flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90">
+            <Link
+              to="/courses/$id"
+              params={{ id: courseId }}
+              className="flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90"
+            >
               <CheckCircle2 className="size-4" /> Finish course
             </Link>
           )}
@@ -180,8 +234,15 @@ function renderInline(text: string) {
   const parts = text.split(/(`[^`]+`)/g);
   return parts.map((p, i) =>
     p.startsWith("`") && p.endsWith("`") ? (
-      <code key={i} className="font-mono text-sm bg-secondary border border-border rounded px-1.5 py-0.5 text-syntax-attr">{p.slice(1, -1)}</code>
-    ) : <span key={i}>{p}</span>
+      <code
+        key={i}
+        className="font-mono text-sm bg-secondary border border-border rounded px-1.5 py-0.5 text-syntax-attr"
+      >
+        {p.slice(1, -1)}
+      </code>
+    ) : (
+      <span key={i}>{p}</span>
+    ),
   );
 }
 
@@ -229,7 +290,10 @@ function Quiz({ questions }: { questions: { q: string; options: string[]; answer
         </button>
       ) : (
         <div className="border border-primary bg-primary/10 rounded-md p-4 font-mono text-sm">
-          ✓ You scored <span className="font-bold">{score}/{questions.length}</span>
+          ✓ You scored{" "}
+          <span className="font-bold">
+            {score}/{questions.length}
+          </span>
         </div>
       )}
     </div>

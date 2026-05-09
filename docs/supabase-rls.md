@@ -38,3 +38,4 @@ The helper schema is revoked from `PUBLIC`; only explicit execution grants are p
 - Keep writes that require elevated privileges on the server.
 - If adding tables, enable RLS immediately and add explicit policies before exposing them to clients.
 - If adding new content status values, review public read policies before deploying.
+- `drizzle/0002_auth_profile_trigger.sql` creates `public.users` and `public.profiles` rows automatically after Supabase Auth signup.

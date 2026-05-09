@@ -8,6 +8,20 @@
       "when": 1778326826022,
       "tag": "0000_normal_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778326900000,
+      "tag": "0001_supabase_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778327000000,
+      "tag": "0002_auth_profile_trigger",
+      "breakpoints": true
     }
   ]
 }

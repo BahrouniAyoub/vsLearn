@@ -1,11 +1,25 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { VSCodeShell } from "@/components/vscode/VSCodeShell";
+import { ProtectedRoute } from "@/lib/auth";
 import { BookOpen, Users, BarChart3, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Admin — VSLearn" }, { name: "description", content: "Manage courses, lessons, and users." }] }),
-  component: AdminLayout,
+  head: () => ({
+    meta: [
+      { title: "Admin — VSLearn" },
+      { name: "description", content: "Manage courses, lessons, and users." },
+    ],
+  }),
+  component: AdminRoute,
 });
+
+function AdminRoute() {
+  return (
+    <ProtectedRoute>
+      <AdminLayout />
+    </ProtectedRoute>
+  );
+}
 
 function AdminLayout() {
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -13,7 +27,9 @@ function AdminLayout() {
 
   const sidebar = (
     <div className="text-[13px]">
-      <div className="px-4 pt-3 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Admin</div>
+      <div className="px-4 pt-3 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+        Admin
+      </div>
       {[
         { to: "/admin", label: "Overview", icon: BarChart3 },
         { to: "/admin/courses", label: "Courses", icon: BookOpen },
@@ -21,7 +37,7 @@ function AdminLayout() {
       ].map((it) => (
         <Link
           key={it.to}
-          to={it.to as any}
+          to={it.to as never}
           activeOptions={{ exact: true }}
           className="flex items-center gap-2 px-4 py-1.5 hover:bg-accent/30 [&.active]:bg-accent/50"
           activeProps={{ className: "active" }}
@@ -35,7 +51,7 @@ function AdminLayout() {
   return (
     <VSCodeShell
       tabs={[{ id: "admin", title: "admin.tsx", path: "/admin", icon: "coding" }]}
-      breadcrumbs={["vslearn", "admin", isRoot ? "overview" : path.split("/").pop() ?? ""]}
+      breadcrumbs={["vslearn", "admin", isRoot ? "overview" : (path.split("/").pop() ?? "")]}
       sidebarContent={sidebar}
     >
       {isRoot ? <AdminOverview /> : <Outlet />}
@@ -69,8 +85,18 @@ function AdminOverview() {
       <div className="mt-8 border border-border bg-card rounded-md p-6">
         <div className="font-semibold">Quick actions</div>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link to="/admin/courses" className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm hover:opacity-90">+ New course</Link>
-          <Link to="/admin/users" className="border border-border bg-secondary px-4 py-2 rounded-md text-sm hover:bg-accent">Manage users</Link>
+          <Link
+            to="/admin/courses"
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm hover:opacity-90"
+          >
+            + New course
+          </Link>
+          <Link
+            to="/admin/users"
+            className="border border-border bg-secondary px-4 py-2 rounded-md text-sm hover:bg-accent"
+          >
+            Manage users
+          </Link>
         </div>
       </div>
     </div>

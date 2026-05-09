@@ -1,14 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-  Files, Search, GitBranch, Bug, Settings, User, Bell,
-  Award, BookOpen, Bookmark, LayoutDashboard, Terminal as TermIcon,
-  ChevronRight, X, Circle, Wifi, AlertCircle, Check,
+  Files,
+  Search,
+  GitBranch,
+  Bug,
+  Settings,
+  User,
+  Bell,
+  Award,
+  BookOpen,
+  Bookmark,
+  LayoutDashboard,
+  Terminal as TermIcon,
+  ChevronRight,
+  X,
+  Circle,
+  Wifi,
+  AlertCircle,
+  Check,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 import { courses, mockUser, courseProgress } from "@/lib/vslearn/data";
 import { CommandPalette } from "./CommandPalette";
 
-interface Tab { id: string; title: string; path: string; icon?: string; }
+interface Tab {
+  id: string;
+  title: string;
+  path: string;
+  icon?: string;
+}
 
 export function VSCodeShell({
   children,
@@ -25,7 +46,11 @@ export function VSCodeShell({
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(true);
-  const [activityView, setActivityView] = useState<"explorer" | "search" | "courses" | "profile">("explorer");
+  const [activityView, setActivityView] = useState<"explorer" | "search" | "courses" | "profile">(
+    "explorer",
+  );
+  const { user } = useAuth();
+  const initials = (user?.email ?? mockUser.email).slice(0, 2).toUpperCase();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -55,7 +80,9 @@ export function VSCodeShell({
           <div key={cid} className="group">
             <div className="flex items-center gap-1 px-2 py-1 hover:bg-accent/30 cursor-pointer">
               <ChevronRight className="size-3 text-muted-foreground" />
-              <span className="text-base mr-1" style={{ color: course.color }}>{course.icon}</span>
+              <span className="text-base mr-1" style={{ color: course.color }}>
+                {course.icon}
+              </span>
               <span className="truncate">{course.title}</span>
             </div>
             {course.modules.map((m) => (
@@ -101,7 +128,10 @@ export function VSCodeShell({
       </div>
       <div className="px-3 pb-4 flex flex-wrap gap-2">
         {mockUser.badges.map((b) => (
-          <div key={b.id} className="bg-secondary border border-border rounded px-2 py-1 text-xs flex items-center gap-1">
+          <div
+            key={b.id}
+            className="bg-secondary border border-border rounded px-2 py-1 text-xs flex items-center gap-1"
+          >
             <span>{b.icon}</span> {b.name}
           </div>
         ))}
@@ -118,10 +148,14 @@ export function VSCodeShell({
           <span className="size-3 rounded-full bg-[#febc2e]" />
           <span className="size-3 rounded-full bg-[#28c840]" />
         </div>
-        <Link to="/" className="font-semibold tracking-tight mr-4">VS<span className="text-primary">Learn</span></Link>
+        <Link to="/" className="font-semibold tracking-tight mr-4">
+          VS<span className="text-primary">Learn</span>
+        </Link>
         <div className="flex gap-3 text-muted-foreground">
           {["File", "Edit", "View", "Go", "Run", "Help"].map((m) => (
-            <span key={m} className="hover:text-foreground cursor-default">{m}</span>
+            <span key={m} className="hover:text-foreground cursor-default">
+              {m}
+            </span>
           ))}
         </div>
         <button
@@ -129,12 +163,14 @@ export function VSCodeShell({
           className="mx-auto bg-secondary border border-border rounded px-3 py-1 text-xs text-muted-foreground hover:bg-accent/40 hidden md:flex items-center gap-2 min-w-[300px] justify-center"
         >
           <Search className="size-3" /> Search lessons, courses, commands…
-          <kbd className="ml-2 px-1.5 py-0.5 bg-background border border-border rounded text-[10px]">⌘K</kbd>
+          <kbd className="ml-2 px-1.5 py-0.5 bg-background border border-border rounded text-[10px]">
+            ⌘K
+          </kbd>
         </button>
         <div className="ml-auto flex items-center gap-3 text-muted-foreground">
           <Bell className="size-3.5" />
           <div className="size-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-semibold text-primary-foreground">
-            {mockUser.name.split(" ").map((n) => n[0]).join("")}
+            {initials}
           </div>
         </div>
       </div>
@@ -142,16 +178,47 @@ export function VSCodeShell({
       <div className="flex flex-1 min-h-0">
         {/* Activity bar */}
         <div className="w-12 bg-activity-bar flex flex-col items-center py-2 gap-1 flex-shrink-0">
-          <ActivityIcon icon={<Files className="size-5" />} active={activityView === "explorer"} onClick={() => setActivityView("explorer")} label="Explorer" />
-          <ActivityIcon icon={<Search className="size-5" />} active={activityView === "search"} onClick={() => { setActivityView("search"); setPaletteOpen(true); }} label="Search" />
-          <ActivityIcon icon={<BookOpen className="size-5" />} active={activityView === "courses"} onClick={() => setActivityView("courses")} label="Courses" link="/courses" />
-          <ActivityIcon icon={<LayoutDashboard className="size-5" />} label="Dashboard" link="/dashboard" />
+          <ActivityIcon
+            icon={<Files className="size-5" />}
+            active={activityView === "explorer"}
+            onClick={() => setActivityView("explorer")}
+            label="Explorer"
+          />
+          <ActivityIcon
+            icon={<Search className="size-5" />}
+            active={activityView === "search"}
+            onClick={() => {
+              setActivityView("search");
+              setPaletteOpen(true);
+            }}
+            label="Search"
+          />
+          <ActivityIcon
+            icon={<BookOpen className="size-5" />}
+            active={activityView === "courses"}
+            onClick={() => setActivityView("courses")}
+            label="Courses"
+            link="/courses"
+          />
+          <ActivityIcon
+            icon={<LayoutDashboard className="size-5" />}
+            label="Dashboard"
+            link="/dashboard"
+          />
           <ActivityIcon icon={<GitBranch className="size-5" />} label="Source Control" />
           <ActivityIcon icon={<Bug className="size-5" />} label="Run & Debug" />
           <ActivityIcon icon={<Award className="size-5" />} label="Achievements" />
           <div className="mt-auto flex flex-col gap-1">
-            <ActivityIcon icon={<User className="size-5" />} label="Account" link="/login" />
-            <ActivityIcon icon={<Settings className="size-5" />} label="Settings" />
+            <ActivityIcon
+              icon={<User className="size-5" />}
+              label="Account"
+              link={user ? "/settings/account" : "/login"}
+            />
+            <ActivityIcon
+              icon={<Settings className="size-5" />}
+              label="Settings"
+              link="/settings/account"
+            />
           </div>
         </div>
 
@@ -160,9 +227,7 @@ export function VSCodeShell({
           <div className="px-4 h-9 flex items-center text-[11px] uppercase tracking-wider text-muted-foreground font-semibold border-b border-border">
             Explorer
           </div>
-          <div className="flex-1 overflow-y-auto">
-            {sidebarContent ?? defaultSidebar}
-          </div>
+          <div className="flex-1 overflow-y-auto">{sidebarContent ?? defaultSidebar}</div>
         </aside>
 
         {/* Editor area */}
@@ -173,11 +238,11 @@ export function VSCodeShell({
               {tabs.map((tab, i) => (
                 <Link
                   key={tab.id}
-                  to={tab.path}
+                  to={tab.path as never}
                   className="h-9 px-3 flex items-center gap-2 text-xs border-r border-border bg-tab-inactive [&.active]:bg-tab-active [&.active]:text-foreground text-muted-foreground hover:text-foreground"
                   activeProps={{ className: "active" }}
                 >
-                  <FileIcon type={tab.icon as any} />
+                  <FileIcon type={tab.icon} />
                   {tab.title}
                   <X className="size-3 opacity-0 hover:opacity-100" />
                 </Link>
@@ -205,12 +270,23 @@ export function VSCodeShell({
             <div className="h-56 border-t border-border bg-terminal flex flex-col flex-shrink-0">
               <div className="h-8 flex items-center px-3 border-b border-border text-xs">
                 <div className="flex gap-4">
-                  <span className="text-foreground border-b-2 border-primary pb-1.5 -mb-px">TERMINAL</span>
-                  <span className="text-muted-foreground hover:text-foreground cursor-pointer">PROBLEMS</span>
-                  <span className="text-muted-foreground hover:text-foreground cursor-pointer">OUTPUT</span>
-                  <span className="text-muted-foreground hover:text-foreground cursor-pointer">DEBUG</span>
+                  <span className="text-foreground border-b-2 border-primary pb-1.5 -mb-px">
+                    TERMINAL
+                  </span>
+                  <span className="text-muted-foreground hover:text-foreground cursor-pointer">
+                    PROBLEMS
+                  </span>
+                  <span className="text-muted-foreground hover:text-foreground cursor-pointer">
+                    OUTPUT
+                  </span>
+                  <span className="text-muted-foreground hover:text-foreground cursor-pointer">
+                    DEBUG
+                  </span>
                 </div>
-                <button onClick={() => setTerminalOpen(false)} className="ml-auto text-muted-foreground hover:text-foreground">
+                <button
+                  onClick={() => setTerminalOpen(false)}
+                  className="ml-auto text-muted-foreground hover:text-foreground"
+                >
                   <X className="size-3.5" />
                 </button>
               </div>
@@ -219,7 +295,8 @@ export function VSCodeShell({
                   <div className="text-muted-foreground">
                     <span className="text-syntax-function">vslearn</span>
                     <span className="text-syntax-keyword"> $ </span>
-                    Welcome to your learning terminal. Tip: press <kbd className="px-1 bg-secondary rounded">Ctrl+K</kbd> for the command palette.
+                    Welcome to your learning terminal. Tip: press{" "}
+                    <kbd className="px-1 bg-secondary rounded">Ctrl+K</kbd> for the command palette.
                   </div>
                 )}
               </div>
@@ -230,16 +307,27 @@ export function VSCodeShell({
 
       {/* Status bar */}
       <div className="h-6 bg-statusbar text-white text-[11px] flex items-center px-2 gap-3 flex-shrink-0">
-        <span className="flex items-center gap-1"><GitBranch className="size-3" /> main</span>
-        <span className="flex items-center gap-1"><AlertCircle className="size-3" /> 0 <Circle className="size-2.5" /> 0</span>
-        <button onClick={() => setTerminalOpen((t) => !t)} className="flex items-center gap-1 hover:bg-white/10 px-1.5 rounded">
+        <span className="flex items-center gap-1">
+          <GitBranch className="size-3" /> main
+        </span>
+        <span className="flex items-center gap-1">
+          <AlertCircle className="size-3" /> 0 <Circle className="size-2.5" /> 0
+        </span>
+        <button
+          onClick={() => setTerminalOpen((t) => !t)}
+          className="flex items-center gap-1 hover:bg-white/10 px-1.5 rounded"
+        >
           <TermIcon className="size-3" /> Terminal
         </button>
         <span className="ml-auto flex items-center gap-3">
           <span>UTF-8</span>
           <span>TypeScript</span>
-          <span className="flex items-center gap-1"><Wifi className="size-3" /> Connected</span>
-          <span className="flex items-center gap-1"><Check className="size-3" /> VSLearn</span>
+          <span className="flex items-center gap-1">
+            <Wifi className="size-3" /> Connected
+          </span>
+          <span className="flex items-center gap-1">
+            <Check className="size-3" /> VSLearn
+          </span>
         </span>
       </div>
 
@@ -249,8 +337,18 @@ export function VSCodeShell({
 }
 
 function ActivityIcon({
-  icon, active, onClick, label, link,
-}: { icon: React.ReactNode; active?: boolean; onClick?: () => void; label: string; link?: string }) {
+  icon,
+  active,
+  onClick,
+  label,
+  link,
+}: {
+  icon: React.ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+  label: string;
+  link?: string;
+}) {
   const inner = (
     <button
       onClick={onClick}
@@ -274,7 +372,10 @@ function FileIcon({ type }: { type?: string }) {
   };
   const it = map[type ?? "text"] ?? map.text;
   return (
-    <span className="inline-flex items-center justify-center w-4 h-4 rounded-sm text-[8px] font-bold flex-shrink-0" style={{ color: it.color }}>
+    <span
+      className="inline-flex items-center justify-center w-4 h-4 rounded-sm text-[8px] font-bold flex-shrink-0"
+      style={{ color: it.color }}
+    >
       {it.ch}
     </span>
   );

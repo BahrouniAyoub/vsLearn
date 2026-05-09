@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CoursesRouteImport } from './routes/courses'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsAccountRouteImport } from './routes/settings.account'
 import { Route as CoursesIdRouteImport } from './routes/courses.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminCoursesRouteImport } from './routes/admin.courses'
@@ -28,6 +30,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -48,6 +55,11 @@ const AdminRoute = AdminRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsAccountRoute = SettingsAccountRouteImport.update({
+  id: '/settings/account',
+  path: '/settings/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoursesIdRoute = CoursesIdRouteImport.update({
@@ -76,11 +88,13 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin/courses': typeof AdminCoursesRoute
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/settings/account': typeof SettingsAccountRoute
   '/learn/$courseId/$lessonId': typeof LearnCourseIdLessonIdRoute
 }
 export interface FileRoutesByTo {
@@ -88,11 +102,13 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin/courses': typeof AdminCoursesRoute
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/settings/account': typeof SettingsAccountRoute
   '/learn/$courseId/$lessonId': typeof LearnCourseIdLessonIdRoute
 }
 export interface FileRoutesById {
@@ -101,11 +117,13 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin/courses': typeof AdminCoursesRoute
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
+  '/settings/account': typeof SettingsAccountRoute
   '/learn/$courseId/$lessonId': typeof LearnCourseIdLessonIdRoute
 }
 export interface FileRouteTypes {
@@ -115,11 +133,13 @@ export interface FileRouteTypes {
     | '/admin'
     | '/courses'
     | '/dashboard'
+    | '/forgot-password'
     | '/login'
     | '/register'
     | '/admin/courses'
     | '/admin/users'
     | '/courses/$id'
+    | '/settings/account'
     | '/learn/$courseId/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -127,11 +147,13 @@ export interface FileRouteTypes {
     | '/admin'
     | '/courses'
     | '/dashboard'
+    | '/forgot-password'
     | '/login'
     | '/register'
     | '/admin/courses'
     | '/admin/users'
     | '/courses/$id'
+    | '/settings/account'
     | '/learn/$courseId/$lessonId'
   id:
     | '__root__'
@@ -139,11 +161,13 @@ export interface FileRouteTypes {
     | '/admin'
     | '/courses'
     | '/dashboard'
+    | '/forgot-password'
     | '/login'
     | '/register'
     | '/admin/courses'
     | '/admin/users'
     | '/courses/$id'
+    | '/settings/account'
     | '/learn/$courseId/$lessonId'
   fileRoutesById: FileRoutesById
 }
@@ -152,8 +176,10 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   CoursesRoute: typeof CoursesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  SettingsAccountRoute: typeof SettingsAccountRoute
   LearnCourseIdLessonIdRoute: typeof LearnCourseIdLessonIdRoute
 }
 
@@ -171,6 +197,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -199,6 +232,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/account': {
+      id: '/settings/account'
+      path: '/settings/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/courses/$id': {
@@ -260,8 +300,10 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   CoursesRoute: CoursesRouteWithChildren,
   DashboardRoute: DashboardRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  SettingsAccountRoute: SettingsAccountRoute,
   LearnCourseIdLessonIdRoute: LearnCourseIdLessonIdRoute,
 }
 export const routeTree = rootRouteImport
