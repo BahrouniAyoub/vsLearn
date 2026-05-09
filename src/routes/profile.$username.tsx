@@ -227,9 +227,18 @@ function PublicProfile() {
             <Panel
               title="Public projects"
               empty={projects.length === 0 ? "No public projects yet." : undefined}
+              action={
+                <Link
+                  to="/profile/$username/projects"
+                  params={{ username }}
+                  className="text-xs text-muted-foreground hover:text-primary"
+                >
+                  View all
+                </Link>
+              }
             >
               <div className="grid md:grid-cols-2 gap-3">
-                {projects.map((project) => (
+                {projects.slice(0, 4).map((project) => (
                   <article key={project.id} className="border border-border rounded-md bg-card p-5">
                     <div className="font-semibold">{project.title}</div>
                     <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
@@ -260,6 +269,15 @@ function PublicProfile() {
                   </article>
                 ))}
               </div>
+              {projects.length > 4 && (
+                <Link
+                  to="/profile/$username/projects"
+                  params={{ username }}
+                  className="block text-center text-xs text-muted-foreground hover:text-primary mt-4 pt-3 border-t border-border"
+                >
+                  View all {projects.length} projects
+                </Link>
+              )}
             </Panel>
           </div>
         </section>
@@ -288,10 +306,13 @@ function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: s
   );
 }
 
-function Panel({ title, empty, children }: { title: string; empty?: string; children: ReactNode }) {
+function Panel({ title, empty, action, children }: { title: string; empty?: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section className="border border-border bg-card rounded-md p-5">
-      <h2 className="text-xl font-semibold">{title}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        {action}
+      </div>
       <div className="mt-4 space-y-3">
         {empty ? <div className="text-sm text-muted-foreground">{empty}</div> : children}
       </div>

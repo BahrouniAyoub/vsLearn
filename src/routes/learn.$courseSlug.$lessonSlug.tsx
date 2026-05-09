@@ -1,6 +1,6 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { Code, Eye } from "lucide-react";
+import { Code, Eye, Send, CheckCircle2, ExternalLink } from "lucide-react";
 
 import { ProtectedRoute } from "@/lib/auth";
 import { getCourseContent } from "@/lib/content";
@@ -18,6 +18,8 @@ import { LessonTracker } from "@/components/progress";
 import { LessonLayout, LessonHeader, LessonInstructions, SolutionDialog } from "@/components/lesson";
 import type { BottomPanelTab } from "@/components/lesson";
 import type { ChallengeValidation, CourseLesson, CourseContent, CourseModule } from "@/lib/content";
+import { useProjects, type ProjectSubmission } from "@/lib/projects";
+import { ProjectForm, ProjectStatus } from "@/components/projects";
 
 export const Route = createFileRoute("/learn/$courseSlug/$lessonSlug")({
   head: ({ params }) => {
@@ -189,8 +191,9 @@ function LessonView() {
 
   const isCoding = lesson.type === "coding";
   const isQuiz = lesson.type === "quiz";
+  const isProject = lesson.type === "project";
   const isHtmlLesson = files.some((f) => f.path.endsWith(".html"));
-  const hasCodingContent = isCoding && files.length > 0;
+  const hasCodingContent = (isCoding || isProject) && files.length > 0;
 
   const challengeValidation: ChallengeValidation | null | undefined = contentLesson?.lesson.challenge?.validation;
   const challengeInstructions = contentLesson?.lesson.challenge?.instructions;
@@ -215,11 +218,35 @@ function LessonView() {
   const lessonProg = progress.getLessonProgress(course.id, lesson.id);
   const didMount = useRef(false);
 
+  const {
+    getProjectForLesson,
+    startProject,
+    updateDraft,
+    submit: submitProject,
+    setPublished,
+  } = useProjects();
+
+  const [currentProject, setCurrentProject] = useState<ProjectSubmission | null>(null);
+  const [projectSubmitting, setProjectSubmitting] = useState(false);
+  const [projectSubmitted, setProjectSubmitted] = useState(false);
+  const prevSlugRef = useRef(lessonSlug);
+
   useEffect(() => {
-    if (didMount.current) return;
+    if (didMount.current && prevSlugRef.current === lessonSlug) return;
+    prevSlugRef.current = lessonSlug;
     didMount.current = true;
     progress.startLesson(course.id, lesson.id);
-  }, [course.id, lesson.id, progress]);
+
+    if (isProject) {
+      const existing = getProjectForLesson(course.id, lesson.id);
+      if (existing) {
+        setCurrentProject(existing);
+      } else {
+        const created = startProject(course.id, course.title, lesson.id, lesson.title);
+        setCurrentProject(created);
+      }
+    }
+  }, [course.id, lesson.id, lessonSlug, progress, isProject]);
 
   const handleRecordTime = useCallback(
     (seconds: number) => progress.recordTime(seconds),
@@ -260,6 +287,11 @@ function LessonView() {
     setRunning(true);
     setAllTestsPassed(false);
     progress.recordAttempt(course.id, lesson.id);
+
+    if (isProject && currentProject) {
+      const updated = updateDraft(currentProject, { files: currentFiles });
+      setCurrentProject(updated);
+    }
 
     if (!isHtmlLesson) {
       setViewMode("editor");
@@ -316,7 +348,7 @@ function LessonView() {
     }
 
     setTimeout(() => setRunning(false), 300);
-  }, [isHtmlLesson, lesson.id, currentFiles]);
+  }, [isHtmlLesson, isProject, lesson.id, currentFiles, currentProject, updateDraft]);
 
   const handleReset = useCallback(() => {
     editorRef.current?.resetFiles();
@@ -325,6 +357,50 @@ function LessonView() {
   const handleToggleComplete = useCallback(() => {
     toggleComplete(lesson.id);
   }, [toggleComplete, lesson.id]);
+
+  const handleProjectSave = useCallback(
+    (updates: Partial<ProjectSubmission>) => {
+      if (!currentProject) return;
+      const updated = updateDraft(currentProject, { ...updates, files: currentFiles });
+      setCurrentProject(updated);
+    },
+    [currentProject, updateDraft, currentFiles],
+  );
+
+  const handleProjectDeleteFile = useCallback(
+    (path: string) => {
+      if (!currentProject) return;
+      const updated = updateDraft(currentProject, {
+        files: currentProject.files.filter((f) => f.path !== path),
+      });
+      setCurrentProject(updated);
+    },
+    [currentProject, updateDraft],
+  );
+
+  const handleProjectSubmit = useCallback(() => {
+    if (!currentProject || !challengeValidation) return;
+    setProjectSubmitting(true);
+    setProjectSubmitted(false);
+
+    setTimeout(() => {
+      const config = lessonToTestConfig("project", currentFiles, undefined, challengeValidation);
+      if (config) {
+        const result = submitProject(currentProject, config);
+        setCurrentProject(result.project);
+        if (result.testResults && result.testResults.failed === 0 && result.testResults.total > 0) {
+          setAllTestsPassed(true);
+          progress.completeLesson(course.id, lesson.id, result.testResults.total, result.testResults.total);
+        }
+      } else {
+        const result = submitProject(currentProject, null);
+        setCurrentProject(result.project);
+        progress.completeLesson(course.id, lesson.id, 1, 1);
+      }
+      setProjectSubmitting(false);
+      setProjectSubmitted(true);
+    }, 200);
+  }, [currentProject, challengeValidation, currentFiles, submitProject, course.id, lesson.id, progress]);
 
   const handleTestComplete = useCallback((suite: { summary: { failed: number; errors: number; total: number } }) => {
     const { failed, errors, total } = suite.summary;
@@ -412,6 +488,61 @@ function LessonView() {
     }
   }
 
+  if (isProject && currentProject) {
+    bottomTabs.push({
+      id: "project",
+      label: "PROJECT",
+      content: (
+        <div className="p-4 space-y-4 overflow-y-auto h-full">
+          <div className="flex items-center gap-3 mb-2">
+            <h3 className="text-sm font-semibold">Project Submission</h3>
+            <ProjectStatus status={currentProject.status} />
+            {currentProject.isPublished && (
+              <Link
+                to="/projects/$slug"
+                params={{ slug: currentProject.slug }}
+                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+              >
+                <ExternalLink className="size-3" />
+                Public page
+              </Link>
+            )}
+          </div>
+          {projectSubmitted && currentProject.testResults && (
+            <div className="bg-green-500/10 border border-green-500/30 rounded-md px-4 py-3 text-sm text-green-400">
+              <CheckCircle2 className="size-4 inline mr-2" />
+              Project submitted! {currentProject.testResults.passed}/{currentProject.testResults.total} tests passed.
+            </div>
+          )}
+          {currentProject.status === "draft" && (
+            <p className="text-xs text-muted-foreground">
+              Update your project details below, then submit for review.
+            </p>
+          )}
+          <ProjectForm
+            project={currentProject}
+            onSave={handleProjectSave}
+            onSubmit={handleProjectSubmit}
+            onDeleteFile={handleProjectDeleteFile}
+            isSubmitting={projectSubmitting}
+          />
+        </div>
+      ),
+    });
+  }
+
+  if (isProject && !currentProject) {
+    bottomTabs.push({
+      id: "project",
+      label: "PROJECT",
+      content: (
+        <div className="p-4 text-sm text-muted-foreground">
+          Loading project...
+        </div>
+      ),
+    });
+  }
+
   const prev = navigation.prev;
   const next = navigation.next;
 
@@ -437,6 +568,16 @@ function LessonView() {
         onToggleHints={() => setHintsVisible((v) => !v)}
         onRevealSolution={() => setSolutionDialogOpen(true)}
         onToggleComplete={handleToggleComplete}
+        projectStatus={currentProject?.status}
+        onPublishProject={
+          currentProject && currentProject.status === "passed"
+            ? () => {
+                const updated = setPublished(currentProject, !currentProject.isPublished);
+                setCurrentProject(updated);
+              }
+            : undefined
+        }
+        isPublished={currentProject?.isPublished}
       />
       <div className="flex-1 min-h-0">
         <LessonLayout
@@ -458,7 +599,7 @@ function LessonView() {
             </div>
           }
           bottomTabs={bottomTabs}
-          defaultBottomTab={testConfig ? "tests" : "terminal"}
+          defaultBottomTab={isProject ? "project" : testConfig ? "tests" : "terminal"}
         />
       </div>
 

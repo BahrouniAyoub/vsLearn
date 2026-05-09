@@ -7,6 +7,9 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Globe,
+  Lock,
+  ExternalLink,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -35,6 +38,9 @@ type LessonHeaderProps = {
   onToggleHints: () => void;
   onRevealSolution: () => void;
   onToggleComplete: () => void;
+  projectStatus?: string;
+  onPublishProject?: () => void;
+  isPublished?: boolean;
 };
 
 export function LessonHeader({
@@ -57,6 +63,9 @@ export function LessonHeader({
   onToggleHints,
   onRevealSolution,
   onToggleComplete,
+  projectStatus,
+  onPublishProject,
+  isPublished,
 }: LessonHeaderProps) {
   return (
     <div className="border-b border-border bg-sidebar-bg/95 backdrop-blur supports-[backdrop-filter]:bg-sidebar-bg/80">
@@ -132,6 +141,22 @@ export function LessonHeader({
             </button>
           )}
 
+          {projectStatus && projectStatus === "passed" && onPublishProject && (
+            <button
+              type="button"
+              onClick={onPublishProject}
+              className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 border rounded-md ${
+                isPublished
+                  ? "border-green-500/40 bg-green-500/10 text-green-400"
+                  : "border-border bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+              title={isPublished ? "Unpublish project" : "Publish project"}
+            >
+              {isPublished ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
+              <span className="hidden sm:inline">{isPublished ? "Published" : "Publish"}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onToggleComplete}
@@ -168,6 +193,17 @@ export function LessonHeader({
           <span className="inline-flex items-center gap-1 text-[10px] font-mono text-green-400">
             <CheckCircle2 className="size-3" /> All tests passed
           </span>
+        )}
+
+        {projectStatus && (
+          <Link
+            to="/profile/$username/projects"
+            params={{ username: "user" }}
+            className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground"
+          >
+            <ExternalLink className="size-3" />
+            My projects
+          </Link>
         )}
 
         <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">

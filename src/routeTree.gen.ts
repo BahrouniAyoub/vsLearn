@@ -17,13 +17,16 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CoursesRouteImport } from './routes/courses'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
 import { Route as SettingsProfileRouteImport } from './routes/settings.profile'
 import { Route as SettingsAccountRouteImport } from './routes/settings.account'
+import { Route as ProjectsSlugRouteImport } from './routes/projects.$slug'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as LearnCourseSlugRouteImport } from './routes/learn.$courseSlug'
 import { Route as CoursesIdRouteImport } from './routes/courses.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminCoursesRouteImport } from './routes/admin.courses'
+import { Route as ProfileUsernameProjectsRouteImport } from './routes/profile.$username.projects'
 import { Route as LearnCourseSlugLessonSlugRouteImport } from './routes/learn.$courseSlug.$lessonSlug'
 import { Route as CertificateUsernameCertificateSlugRouteImport } from './routes/certificate.$username.$certificateSlug'
 
@@ -67,6 +70,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsProfileRoute = SettingsProfileRouteImport.update({
   id: '/settings/profile',
   path: '/settings/profile',
@@ -75,6 +83,11 @@ const SettingsProfileRoute = SettingsProfileRouteImport.update({
 const SettingsAccountRoute = SettingsAccountRouteImport.update({
   id: '/settings/account',
   path: '/settings/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsSlugRoute = ProjectsSlugRouteImport.update({
+  id: '/projects/$slug',
+  path: '/projects/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
@@ -102,6 +115,11 @@ const AdminCoursesRoute = AdminCoursesRouteImport.update({
   path: '/courses',
   getParentRoute: () => AdminRoute,
 } as any)
+const ProfileUsernameProjectsRoute = ProfileUsernameProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => ProfileUsernameRoute,
+} as any)
 const LearnCourseSlugLessonSlugRoute =
   LearnCourseSlugLessonSlugRouteImport.update({
     id: '/$lessonSlug',
@@ -128,11 +146,14 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRouteWithChildren
-  '/profile/$username': typeof ProfileUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRouteWithChildren
+  '/projects/$slug': typeof ProjectsSlugRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/projects/': typeof ProjectsIndexRoute
   '/certificate/$username/$certificateSlug': typeof CertificateUsernameCertificateSlugRoute
   '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
+  '/profile/$username/projects': typeof ProfileUsernameProjectsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -147,11 +168,14 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRouteWithChildren
-  '/profile/$username': typeof ProfileUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRouteWithChildren
+  '/projects/$slug': typeof ProjectsSlugRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/projects': typeof ProjectsIndexRoute
   '/certificate/$username/$certificateSlug': typeof CertificateUsernameCertificateSlugRoute
   '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
+  '/profile/$username/projects': typeof ProfileUsernameProjectsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -167,11 +191,14 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/courses/$id': typeof CoursesIdRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRouteWithChildren
-  '/profile/$username': typeof ProfileUsernameRoute
+  '/profile/$username': typeof ProfileUsernameRouteWithChildren
+  '/projects/$slug': typeof ProjectsSlugRoute
   '/settings/account': typeof SettingsAccountRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/projects/': typeof ProjectsIndexRoute
   '/certificate/$username/$certificateSlug': typeof CertificateUsernameCertificateSlugRoute
   '/learn/$courseSlug/$lessonSlug': typeof LearnCourseSlugLessonSlugRoute
+  '/profile/$username/projects': typeof ProfileUsernameProjectsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -189,10 +216,13 @@ export interface FileRouteTypes {
     | '/courses/$id'
     | '/learn/$courseSlug'
     | '/profile/$username'
+    | '/projects/$slug'
     | '/settings/account'
     | '/settings/profile'
+    | '/projects/'
     | '/certificate/$username/$certificateSlug'
     | '/learn/$courseSlug/$lessonSlug'
+    | '/profile/$username/projects'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -208,10 +238,13 @@ export interface FileRouteTypes {
     | '/courses/$id'
     | '/learn/$courseSlug'
     | '/profile/$username'
+    | '/projects/$slug'
     | '/settings/account'
     | '/settings/profile'
+    | '/projects'
     | '/certificate/$username/$certificateSlug'
     | '/learn/$courseSlug/$lessonSlug'
+    | '/profile/$username/projects'
   id:
     | '__root__'
     | '/'
@@ -227,10 +260,13 @@ export interface FileRouteTypes {
     | '/courses/$id'
     | '/learn/$courseSlug'
     | '/profile/$username'
+    | '/projects/$slug'
     | '/settings/account'
     | '/settings/profile'
+    | '/projects/'
     | '/certificate/$username/$certificateSlug'
     | '/learn/$courseSlug/$lessonSlug'
+    | '/profile/$username/projects'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -242,9 +278,11 @@ export interface RootRouteChildren {
   LearnRoute: typeof LearnRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
-  ProfileUsernameRoute: typeof ProfileUsernameRoute
+  ProfileUsernameRoute: typeof ProfileUsernameRouteWithChildren
+  ProjectsSlugRoute: typeof ProjectsSlugRoute
   SettingsAccountRoute: typeof SettingsAccountRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
+  ProjectsIndexRoute: typeof ProjectsIndexRoute
   CertificateUsernameCertificateSlugRoute: typeof CertificateUsernameCertificateSlugRoute
 }
 
@@ -306,6 +344,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/': {
+      id: '/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/profile': {
       id: '/settings/profile'
       path: '/settings/profile'
@@ -318,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/account'
       fullPath: '/settings/account'
       preLoaderRoute: typeof SettingsAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$slug': {
+      id: '/projects/$slug'
+      path: '/projects/$slug'
+      fullPath: '/projects/$slug'
+      preLoaderRoute: typeof ProjectsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile/$username': {
@@ -354,6 +406,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/courses'
       preLoaderRoute: typeof AdminCoursesRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/profile/$username/projects': {
+      id: '/profile/$username/projects'
+      path: '/projects'
+      fullPath: '/profile/$username/projects'
+      preLoaderRoute: typeof ProfileUsernameProjectsRouteImport
+      parentRoute: typeof ProfileUsernameRoute
     }
     '/learn/$courseSlug/$lessonSlug': {
       id: '/learn/$courseSlug/$lessonSlug'
@@ -417,6 +476,18 @@ const LearnRouteChildren: LearnRouteChildren = {
 
 const LearnRouteWithChildren = LearnRoute._addFileChildren(LearnRouteChildren)
 
+interface ProfileUsernameRouteChildren {
+  ProfileUsernameProjectsRoute: typeof ProfileUsernameProjectsRoute
+}
+
+const ProfileUsernameRouteChildren: ProfileUsernameRouteChildren = {
+  ProfileUsernameProjectsRoute: ProfileUsernameProjectsRoute,
+}
+
+const ProfileUsernameRouteWithChildren = ProfileUsernameRoute._addFileChildren(
+  ProfileUsernameRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
@@ -426,9 +497,11 @@ const rootRouteChildren: RootRouteChildren = {
   LearnRoute: LearnRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
-  ProfileUsernameRoute: ProfileUsernameRoute,
+  ProfileUsernameRoute: ProfileUsernameRouteWithChildren,
+  ProjectsSlugRoute: ProjectsSlugRoute,
   SettingsAccountRoute: SettingsAccountRoute,
   SettingsProfileRoute: SettingsProfileRoute,
+  ProjectsIndexRoute: ProjectsIndexRoute,
   CertificateUsernameCertificateSlugRoute:
     CertificateUsernameCertificateSlugRoute,
 }
